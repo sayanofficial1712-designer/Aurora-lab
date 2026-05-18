@@ -119,6 +119,124 @@ body {
   min-height: 1.2em;
 }
 
+/* ── Spotify section ── */
+.spotify-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 4px 0;
+}
+
+.spotify-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spotify-label {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(60, 60, 70, 0.9);
+}
+
+.spotify-sub {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  color: rgba(60, 60, 70, 0.55);
+  line-height: 1.4;
+  margin-top: -4px;
+}
+
+.spotify-connect-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #1DB954;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  align-self: flex-start;
+}
+
+.spotify-connect-btn:hover {
+  background: #1ed760;
+  transform: translateY(-1px);
+}
+
+.spotify-connected {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spotify-now-playing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spotify-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spotify-track-label {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: #1DB954;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spotify-track-name {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(60, 60, 70, 0.9);
+  line-height: 1.3;
+}
+
+.spotify-energy-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.spotify-energy-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1DB954, #1ed760);
+  border-radius: 2px;
+  width: 50%;
+  transition: width 2s ease;
+}
+
+.spotify-disconnect-btn {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(60, 60, 70, 0.5);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+  align-self: flex-start;
+}
+
+.spotify-disconnect-btn:hover {
+  color: rgba(60, 60, 70, 0.85);
+}
+
 .color-pickers {
   display: flex;
   gap: 10px;
