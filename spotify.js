@@ -4,8 +4,10 @@
 // Add http://localhost:3000 (and your deployed URL) as a
 // Redirect URI in your Spotify app settings.
 // ─────────────────────────────────────────────────────────────
-const SPOTIFY_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+const SPOTIFY_CLIENT_ID = 'a0b0a5190eff47bd92e15db39f5d37e6';
+const SPOTIFY_REDIRECT_URI = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://sayanofficial1712-designer.github.io/Aurora-lab/';
 const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state';
 
 // ─────────────────────────────────────────────────────────────
