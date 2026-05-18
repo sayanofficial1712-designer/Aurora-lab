@@ -127,14 +127,20 @@ const fragmentShaderSource = `
     float soft = snoise(p * 2.0 + t * 0.05) * 0.04;
     color += soft;
 
-    // Valence-driven warm/cool shift — happy songs warmer, sad cooler
-    vec3 warmTint = vec3(0.12, 0.04, -0.08);
-    vec3 coolTint = vec3(-0.10, -0.03, 0.14);
-    color += mix(coolTint, warmTint, (warmCoolShift + 1.0) * 0.5) * abs(warmCoolShift) * 1.4;
+    // Valence warm/cool — dramatic tint so happy ≠ sad at a glance
+    // Warm pushes reds/oranges, cool pushes blues/violets
+    vec3 warmTint = vec3(0.22, 0.06, -0.18);
+    vec3 coolTint = vec3(-0.18, -0.06, 0.26);
+    float warmCoolMag = abs(warmCoolShift);
+    color += mix(coolTint, warmTint, (warmCoolShift + 1.0) * 0.5) * warmCoolMag;
 
-    // Saturation: base intensity + energy-driven boost
+    // Sad/cool songs also slightly darken; happy/warm songs slightly brighten
+    color *= 1.0 + warmCoolShift * 0.12;
+
+    // Saturation: sad/calm desaturates noticeably, happy/energetic boosts vividness
     float gray = dot(color, vec3(0.299, 0.587, 0.114));
-    color = mix(vec3(gray), color, intensity + saturationBoost);
+    float satFinal = clamp(intensity + saturationBoost, 0.25, 1.7);
+    color = mix(vec3(gray), color, satFinal);
 
     color = clamp(color, 0.0, 1.0);
     
@@ -457,45 +463,43 @@ function render() {
   let warmCoolShift = 0.0;
   let saturationBoost = 0.0;
 
-  // Spotify modulation — layered on top, preserves mood as baseline
+  // Spotify modulation — amplified for clear, dramatic differences between songs
   if (window.spotifyState && window.spotifyState.connected) {
     const s = window.spotifyState;
 
-    // TEMPO drives the breathing speed of the gradient
-    // Normalize 60–180 BPM around a baseline of 120 → multiplier 0.55× to 1.75×
-    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 120, 0), 1);
-    const tempoMul = 0.55 + tempoNorm * 1.20;
+    // TEMPO drives breathing speed — 60 BPM → 0.35×, 160+ BPM → 2.6×
+    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 100, 0), 1);
+    const tempoMul = 0.35 + tempoNorm * 2.25;
 
-    // ENERGY drives speed + distortion strength
-    // Energy 0 → 0.45×, Energy 1 → 1.75×
-    const energyMul = 0.45 + s.energy * 1.30;
+    // ENERGY drives speed + distortion massively — 0 → 0.3×, 1 → 2.8×
+    const energyMul = 0.3 + s.energy * 2.5;
 
-    speed = speed * tempoMul * (0.6 + s.energy * 0.9);
-    distortion = distortion * (0.5 + s.energy * 1.1);
+    // DANCEABILITY drives fluidity — 0 → 0.5×, 1 → 2.2×
+    const danceMul = 0.5 + s.danceability * 1.7;
 
-    // DANCEABILITY drives fluidity/wave motion
-    distortion *= 0.7 + s.danceability * 0.8;
+    speed = Math.max(0.05, speed) * tempoMul * (0.4 + s.energy * 1.4);
+    distortion = Math.max(0.08, distortion) * energyMul * 0.7 + 0.05 * s.danceability;
+    distortion *= 0.6 + s.danceability * 0.9;
 
-    // VALENCE drives warm/cool color shift (the big visible change)
-    // 0 (sad) → -0.7 cool, 0.5 → 0 neutral, 1.0 (happy) → +0.7 warm
-    warmCoolShift = (s.valence - 0.5) * 1.4;
+    // VALENCE drives strong warm/cool shift — sad = -1.0 cool, happy = +1.0 warm
+    warmCoolShift = (s.valence - 0.5) * 2.0;
+    warmCoolShift = Math.max(-1.0, Math.min(1.0, warmCoolShift));
 
-    // Energy also nudges saturation slightly (vivid on intense tracks)
-    saturationBoost = (s.energy - 0.5) * 0.25;
+    // Saturation: low-energy/sad songs desaturate, high-energy/happy songs boost
+    // Range: -0.45 (very desaturated) to +0.45 (very vivid)
+    const moodScore = (s.energy + s.valence) / 2;
+    saturationBoost = (moodScore - 0.5) * 0.9;
 
-    // Debug log every ~2s
-    if (!window._lastSpotifyLog || elapsed - window._lastSpotifyLog > 2) {
+    // Mouse strength softens on calm tracks
+    mouseStrength *= 0.6 + s.energy * 0.8;
+
+    // Debug log every ~1.5s
+    if (!window._lastSpotifyLog || elapsed - window._lastSpotifyLog > 1.5) {
       window._lastSpotifyLog = elapsed;
-      console.log('[Aurora] live mapping',
-        `energy:${s.energy.toFixed(2)}`,
-        `valence:${s.valence.toFixed(2)}`,
-        `tempo:${s.tempo.toFixed(0)}`,
-        `dance:${s.danceability.toFixed(2)}`,
+      console.log('%c[Aurora] mapping', 'color:#1DB954',
+        `E:${s.energy.toFixed(2)} V:${s.valence.toFixed(2)} BPM:${s.tempo.toFixed(0)} D:${s.danceability.toFixed(2)}`,
         '→',
-        `speed:${speed.toFixed(2)}`,
-        `dist:${distortion.toFixed(2)}`,
-        `warmCool:${warmCoolShift.toFixed(2)}`,
-        `satBoost:${saturationBoost.toFixed(2)}`);
+        `speed:${speed.toFixed(2)} dist:${distortion.toFixed(2)} warmCool:${warmCoolShift.toFixed(2)} sat:${saturationBoost.toFixed(2)}`);
     }
   }
 

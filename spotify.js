@@ -34,7 +34,7 @@ window.tickSpotify = function () {
   if (!window.spotifyState.connected) return;
   const s = window.spotifyState;
   const lerp = (a, b, t) => a + (b - a) * t;
-  const speed = 0.025; // smooth but noticeable transitions between songs
+  const speed = 0.05; // fast but still smooth — transitions visible in ~1s
   s.energy = lerp(s.energy, _target.energy, speed);
   s.valence = lerp(s.valence, _target.valence, speed);
   s.tempo = lerp(s.tempo, _target.tempo, speed);
@@ -168,28 +168,29 @@ async function _fetchArtist(token, artistId) {
   return resp.json();
 }
 
-// Genre → audio-feature heuristics (used when audio-features is blocked/403)
+// Genre → audio-feature heuristics. Widened spread so different songs feel dramatically different.
 const _GENRE_PROFILES = [
-  { match: /(edm|electronic|house|techno|trance|dubstep|dance)/i, energy: 0.85, valence: 0.7, tempo: 128, danceability: 0.85 },
-  { match: /(rock|metal|punk|grunge)/i,                         energy: 0.8,  valence: 0.55, tempo: 130, danceability: 0.55 },
-  { match: /(hip\s?hop|rap|trap|drill)/i,                       energy: 0.75, valence: 0.55, tempo: 95,  danceability: 0.8  },
-  { match: /(pop)/i,                                             energy: 0.7,  valence: 0.7,  tempo: 115, danceability: 0.75 },
-  { match: /(r&b|soul|funk|disco)/i,                             energy: 0.6,  valence: 0.7,  tempo: 100, danceability: 0.8  },
-  { match: /(latin|reggaeton|salsa|samba|bossa)/i,               energy: 0.75, valence: 0.8,  tempo: 100, danceability: 0.85 },
-  { match: /(jazz|blues|swing)/i,                                energy: 0.45, valence: 0.55, tempo: 110, danceability: 0.55 },
-  { match: /(folk|acoustic|singer-songwriter|indie\s*folk)/i,    energy: 0.4,  valence: 0.5,  tempo: 95,  danceability: 0.45 },
-  { match: /(classical|orchestral|piano|baroque|opera)/i,        energy: 0.35, valence: 0.45, tempo: 90,  danceability: 0.3  },
-  { match: /(ambient|chill|lofi|lo-fi|new age|downtempo)/i,      energy: 0.3,  valence: 0.45, tempo: 80,  danceability: 0.5  },
-  { match: /(country)/i,                                          energy: 0.55, valence: 0.6,  tempo: 105, danceability: 0.55 },
-  { match: /(k-pop|j-pop|anime)/i,                               energy: 0.8,  valence: 0.75, tempo: 120, danceability: 0.8  },
+  { match: /(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb)/i, energy: 0.95, valence: 0.75, tempo: 140, danceability: 0.92 },
+  { match: /(dance|club)/i,                                       energy: 0.9,  valence: 0.78, tempo: 128, danceability: 0.9  },
+  { match: /(rock|metal|punk|grunge|hardcore)/i,                  energy: 0.88, valence: 0.5,  tempo: 135, danceability: 0.5  },
+  { match: /(k-pop|j-pop|anime)/i,                                energy: 0.85, valence: 0.82, tempo: 125, danceability: 0.85 },
+  { match: /(latin|reggaeton|salsa|samba|bossa|afrobeat)/i,       energy: 0.82, valence: 0.85, tempo: 105, danceability: 0.9  },
+  { match: /(hip\s?hop|rap|trap|drill)/i,                         energy: 0.75, valence: 0.55, tempo: 95,  danceability: 0.82 },
+  { match: /(pop)/i,                                              energy: 0.72, valence: 0.72, tempo: 118, danceability: 0.78 },
+  { match: /(r&b|soul|funk|disco)/i,                              energy: 0.6,  valence: 0.72, tempo: 100, danceability: 0.82 },
+  { match: /(country)/i,                                          energy: 0.55, valence: 0.62, tempo: 105, danceability: 0.55 },
+  { match: /(jazz|blues|swing)/i,                                 energy: 0.4,  valence: 0.5,  tempo: 105, danceability: 0.5  },
+  { match: /(folk|acoustic|singer-songwriter|indie\s*folk)/i,     energy: 0.32, valence: 0.48, tempo: 90,  danceability: 0.4  },
+  { match: /(classical|orchestral|piano|baroque|opera)/i,         energy: 0.22, valence: 0.42, tempo: 80,  danceability: 0.22 },
+  { match: /(ambient|chill|lofi|lo-fi|new age|downtempo|sleep)/i, energy: 0.15, valence: 0.42, tempo: 72,  danceability: 0.4  },
 ];
 
-// Keyword hints in track/album titles (sad ballad vs party track)
+// Keyword hints in track/album titles — pushed further to extremes
 const _TITLE_HINTS = [
-  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|blue|grief|funeral)/i, energy: 0.35, valence: 0.25, tempo: 75, danceability: 0.35 },
-  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft)/i,       energy: 0.3,  valence: 0.5,  tempo: 80,  danceability: 0.4  },
-  { match: /(party|dance|club|remix|banger|hype|fire)/i,               energy: 0.85, valence: 0.8,  tempo: 128, danceability: 0.9  },
-  { match: /(love|happy|joy|sun|bright|smile|dream)/i,                 energy: 0.6,  valence: 0.75, tempo: 110, danceability: 0.65 },
+  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25 },
+  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i,           energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3  },
+  { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i,                   energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95 },
+  { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i,                    energy: 0.7,  valence: 0.85, tempo: 115, danceability: 0.72 },
 ];
 
 // Derive features from artist genres + track metadata (works without /audio-features)
