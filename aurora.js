@@ -128,10 +128,9 @@ const fragmentShaderSource = `
     color += soft;
 
     // Valence-driven warm/cool shift — happy songs warmer, sad cooler
-    // Warm = push red/yellow up, blue down; Cool = inverse.
-    vec3 warmTint = vec3(0.08, 0.02, -0.06);
-    vec3 coolTint = vec3(-0.06, -0.02, 0.10);
-    color += mix(coolTint, warmTint, (warmCoolShift + 1.0) * 0.5) * abs(warmCoolShift);
+    vec3 warmTint = vec3(0.12, 0.04, -0.08);
+    vec3 coolTint = vec3(-0.10, -0.03, 0.14);
+    color += mix(coolTint, warmTint, (warmCoolShift + 1.0) * 0.5) * abs(warmCoolShift) * 1.4;
 
     // Saturation: base intensity + energy-driven boost
     float gray = dot(color, vec3(0.299, 0.587, 0.114));

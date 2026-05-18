@@ -150,11 +150,13 @@ async function _fetchCurrentTrack(token) {
   return text ? JSON.parse(text) : null;
 }
 
-async function _fetchAudioFeatures(token, trackId) {
-  const resp = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, {
+// Spotify deprecated /audio-features for new apps (403). We use genre-based mapping only.
+
+async function _fetchTrack(token, trackId) {
+  const resp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!resp.ok) throw new Error(`Audio features ${resp.status}`);
+  if (!resp.ok) throw new Error(`Track ${resp.status}`);
   return resp.json();
 }
 
@@ -182,37 +184,75 @@ const _GENRE_PROFILES = [
   { match: /(k-pop|j-pop|anime)/i,                               energy: 0.8,  valence: 0.75, tempo: 120, danceability: 0.8  },
 ];
 
-// Fallback: derive features from track metadata when /audio-features is blocked
-async function _deriveFeaturesFallback(token, track) {
+// Keyword hints in track/album titles (sad ballad vs party track)
+const _TITLE_HINTS = [
+  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|blue|grief|funeral)/i, energy: 0.35, valence: 0.25, tempo: 75, danceability: 0.35 },
+  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft)/i,       energy: 0.3,  valence: 0.5,  tempo: 80,  danceability: 0.4  },
+  { match: /(party|dance|club|remix|banger|hype|fire)/i,               energy: 0.85, valence: 0.8,  tempo: 128, danceability: 0.9  },
+  { match: /(love|happy|joy|sun|bright|smile|dream)/i,                 energy: 0.6,  valence: 0.75, tempo: 110, danceability: 0.65 },
+];
+
+// Derive features from artist genres + track metadata (works without /audio-features)
+async function _deriveFeatures(token, track) {
+  let fullTrack = track;
+  try {
+    if (track.id) fullTrack = await _fetchTrack(token, track.id);
+  } catch (e) {
+    console.warn('[Aurora × Spotify] track fetch failed, using partial data:', e.message);
+  }
+
   let genres = [];
   try {
-    if (track.artists && track.artists[0]) {
-      const artist = await _fetchArtist(token, track.artists[0].id);
+    if (fullTrack.artists?.[0]?.id) {
+      const artist = await _fetchArtist(token, fullTrack.artists[0].id);
       genres = artist.genres || [];
     }
   } catch (e) {
     console.warn('[Aurora × Spotify] artist fetch failed:', e.message);
   }
 
-  const matched = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
-  const base = matched || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
+  const searchText = `${fullTrack.name || ''} ${fullTrack.album?.name || ''}`;
+  const genreMatch = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
+  const titleMatch = _TITLE_HINTS.find((p) => p.match.test(searchText));
 
-  // Popularity nudge (more popular tracks tend to be slightly more energetic/upbeat)
-  const popularity = (track.popularity ?? 50) / 100;
-  const energy = Math.min(1, base.energy * (0.85 + popularity * 0.3));
-  const valence = Math.min(1, base.valence * (0.9 + popularity * 0.2));
+  let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
+  if (titleMatch) {
+    base = {
+      energy: (base.energy + titleMatch.energy) / 2,
+      valence: (base.valence + titleMatch.valence) / 2,
+      tempo: (base.tempo + titleMatch.tempo) / 2,
+      danceability: (base.danceability + titleMatch.danceability) / 2,
+    };
+  }
 
-  // Vary slightly by track id so different songs in same genre differ
-  const seed = (track.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const jitter = (((seed % 100) / 100) - 0.5) * 0.15;
+  const popularity = (fullTrack.popularity ?? 50) / 100;
+  const durationMs = fullTrack.duration_ms || 200000;
+  const isLong = durationMs > 300000;
+  const isShort = durationMs < 150000;
+
+  let energy = Math.min(1, base.energy * (0.8 + popularity * 0.35));
+  let valence = Math.min(1, base.valence * (0.85 + popularity * 0.25));
+  let tempo = base.tempo;
+  let danceability = base.danceability;
+
+  if (isLong) { energy *= 0.88; tempo *= 0.92; }
+  if (isShort) { energy *= 1.08; tempo *= 1.05; }
+
+  const seed = (fullTrack.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const jitter = (((seed % 100) / 100) - 0.5) * 0.12;
+  energy = Math.min(1, Math.max(0.15, energy + jitter));
+  valence = Math.min(1, Math.max(0.15, valence + jitter));
+  tempo = Math.min(180, Math.max(60, tempo + jitter * 25));
+  danceability = Math.min(1, Math.max(0.15, danceability + jitter));
 
   return {
-    energy: Math.min(1, Math.max(0, energy + jitter)),
-    valence: Math.min(1, Math.max(0, valence + jitter)),
-    tempo: base.tempo + jitter * 30,
-    danceability: Math.min(1, Math.max(0, base.danceability + jitter)),
-    _source: matched ? `fallback:${matched.match}` : 'fallback:default',
+    energy,
+    valence,
+    tempo,
+    danceability,
+    _source: genreMatch ? `genre:${genres[0] || 'matched'}` : titleMatch ? 'title-hint' : 'default',
     _genres: genres,
+    _track: fullTrack.name,
   };
 }
 
@@ -221,7 +261,21 @@ async function _deriveFeaturesFallback(token, track) {
 // ─────────────────────────────────────────────────────────────
 let _pollInterval = null;
 let _lastTrackId = null;
-let _audioFeaturesBlocked = false; // becomes true after first 403, then we skip it
+
+async function _loadTrackFeatures(token, track) {
+  const features = await _deriveFeatures(token, track);
+  _applyFeatures(features, true);
+
+  console.log('%c[Aurora × Spotify] ✓ Aurora reacting', 'color:#1DB954;font-weight:bold', {
+    track: features._track,
+    source: features._source,
+    genres: features._genres.length ? features._genres.slice(0, 3) : '(none)',
+    energy: +features.energy.toFixed(2),
+    valence: +features.valence.toFixed(2),
+    tempo: Math.round(features.tempo),
+    danceability: +features.danceability.toFixed(2),
+  });
+}
 
 async function _poll() {
   try {
@@ -239,40 +293,7 @@ async function _poll() {
       _lastTrackId = data.item.id;
       console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
         `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
-
-      let features = null;
-      let usedFallback = false;
-
-      if (!_audioFeaturesBlocked) {
-        try {
-          features = await _fetchAudioFeatures(token, data.item.id);
-          features._source = 'audio-features';
-        } catch (e) {
-          if (e.message.includes('403') || e.message.includes('401')) {
-            console.warn('[Aurora × Spotify] /audio-features blocked (likely deprecated for new apps). Switching to genre-based fallback.');
-            _audioFeaturesBlocked = true;
-          } else {
-            console.warn('[Aurora × Spotify] audio-features failed:', e.message);
-          }
-        }
-      }
-
-      if (!features) {
-        features = await _deriveFeaturesFallback(token, data.item);
-        usedFallback = true;
-      }
-
-      _applyFeatures(features);
-
-      console.log('[Aurora × Spotify] Features', {
-        source: features._source,
-        ...(features._genres ? { genres: features._genres } : {}),
-        energy: +features.energy.toFixed(2),
-        valence: +features.valence.toFixed(2),
-        tempo: +features.tempo.toFixed(0),
-        danceability: +features.danceability.toFixed(2),
-        fallback: usedFallback,
-      });
+      await _loadTrackFeatures(token, data.item);
     }
   } catch (err) {
     console.warn('[Aurora × Spotify]', err.message);
@@ -280,11 +301,21 @@ async function _poll() {
   }
 }
 
-function _applyFeatures(features) {
+function _applyFeatures(features, snap = false) {
   _target.energy = features.energy;
   _target.valence = features.valence;
   _target.tempo = features.tempo;
   _target.danceability = features.danceability;
+
+  if (snap) {
+    const s = window.spotifyState;
+    s.energy = features.energy;
+    s.valence = features.valence;
+    s.tempo = features.tempo;
+    s.danceability = features.danceability;
+    const bar = document.getElementById('spotifyEnergyFill');
+    if (bar) bar.style.width = `${Math.round(features.energy * 100)}%`;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -313,8 +344,9 @@ function _setConnectedUI(connected) {
 // ─────────────────────────────────────────────────────────────
 async function _connect(token) {
   window.spotifyState.connected = true;
+  _lastTrackId = null;
   _setConnectedUI(true);
-  console.log('%c[Aurora × Spotify] Connected', 'color:#1DB954;font-weight:bold');
+  console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
   await _poll();
   _pollInterval = setInterval(_poll, 4000);
 }
