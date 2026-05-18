@@ -34,6 +34,11 @@ const fragmentShaderSource = `
   uniform float mouseStrength;
   uniform float intensity;
   uniform float distortionAmount;
+  uniform vec3 color1;
+  uniform vec3 color2;
+  uniform vec3 color3;
+  uniform vec3 color4;
+  uniform vec3 color5;
   
   // Simplex noise functions
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -97,12 +102,11 @@ const fragmentShaderSource = `
     
     vec2 p = pos + distort;
     
-    // Richer pastel colors (more saturated but still soft)
-    vec3 pink = vec3(0.96, 0.66, 0.82);      // Richer pink
-    vec3 lavender = vec3(0.77, 0.72, 0.96);  // Richer lavender
-    vec3 mint = vec3(0.66, 0.91, 0.87);      // Richer mint
-    vec3 peach = vec3(0.99, 0.80, 0.71);     // Richer peach
-    vec3 lilac = vec3(0.90, 0.66, 0.94);     // Richer lilac
+    vec3 pink = color1;
+    vec3 lavender = color2;
+    vec3 mint = color3;
+    vec3 peach = color4;
+    vec3 lilac = color5;
     
     // Blend colors based on position and noise
     float blend1 = smoothstep(-0.5, 0.5, n1 + p.x - 0.5);
@@ -186,12 +190,82 @@ const speedLocation = gl.getUniformLocation(program, 'speed');
 const mouseStrengthLocation = gl.getUniformLocation(program, 'mouseStrength');
 const intensityLocation = gl.getUniformLocation(program, 'intensity');
 const distortionLocation = gl.getUniformLocation(program, 'distortionAmount');
+const color1Location = gl.getUniformLocation(program, 'color1');
+const color2Location = gl.getUniformLocation(program, 'color2');
+const color3Location = gl.getUniformLocation(program, 'color3');
+const color4Location = gl.getUniformLocation(program, 'color4');
+const color5Location = gl.getUniformLocation(program, 'color5');
 
 // Control elements
 const speedSlider = document.getElementById('speed');
 const mouseInfluenceSlider = document.getElementById('mouseInfluence');
 const intensitySlider = document.getElementById('intensity');
 const distortionSlider = document.getElementById('distortion');
+const colorSliders = [
+  document.getElementById('color1'),
+  document.getElementById('color2'),
+  document.getElementById('color3'),
+  document.getElementById('color4'),
+  document.getElementById('color5'),
+];
+const shareBtn = document.getElementById('shareBtn');
+
+function hexToRgb(hex) {
+  const value = hex.replace('#', '');
+  return [
+    parseInt(value.slice(0, 2), 16) / 255,
+    parseInt(value.slice(2, 4), 16) / 255,
+    parseInt(value.slice(4, 6), 16) / 255,
+  ];
+}
+
+function isValidHexColor(value) {
+  return /^[0-9a-fA-F]{6}$/.test(value);
+}
+
+function loadColorsFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  colorSliders.forEach((input, i) => {
+    const fromURL = params.get(`c${i + 1}`);
+    if (fromURL && isValidHexColor(fromURL)) {
+      input.value = `#${fromURL}`;
+    }
+  });
+}
+
+function updateShareURL() {
+  const params = new URLSearchParams();
+  colorSliders.forEach((input, i) => {
+    params.set(`c${i + 1}`, input.value.replace('#', ''));
+  });
+  const query = params.toString();
+  const url = `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ''}`;
+  history.replaceState(null, '', url);
+  return url;
+}
+
+loadColorsFromURL();
+colorSliders.forEach((input) => {
+  input.addEventListener('input', updateShareURL);
+});
+
+shareBtn.addEventListener('click', async () => {
+  const url = updateShareURL();
+  try {
+    await navigator.clipboard.writeText(url);
+    shareBtn.textContent = 'Link copied!';
+    shareBtn.classList.add('copied');
+    setTimeout(() => {
+      shareBtn.textContent = 'Copy your aurora link';
+      shareBtn.classList.remove('copied');
+    }, 2000);
+  } catch {
+    shareBtn.textContent = 'Copy failed — try again';
+    setTimeout(() => {
+      shareBtn.textContent = 'Copy your aurora link';
+    }, 2000);
+  }
+});
 
 let startTime = Date.now();
 
@@ -230,6 +304,13 @@ function render() {
   gl.uniform1f(mouseStrengthLocation, mouseStrength);
   gl.uniform1f(intensityLocation, intensity);
   gl.uniform1f(distortionLocation, distortion);
+
+  const colorLocations = [color1Location, color2Location, color3Location, color4Location, color5Location];
+  colorSliders.forEach((input, i) => {
+    const [r, g, b] = hexToRgb(input.value);
+    gl.uniform3f(colorLocations[i], r, g, b);
+  });
+
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   requestAnimationFrame(render);
 }
