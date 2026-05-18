@@ -209,6 +209,53 @@ const colorSliders = [
   document.getElementById('color5'),
 ];
 const shareBtn = document.getElementById('shareBtn');
+const resetBtn = document.getElementById('resetBtn');
+const moodGrid = document.getElementById('moodGrid');
+const moodResult = document.getElementById('moodResult');
+
+const DEFAULT_COLORS = ['#f5a8d1', '#c4b8f5', '#a8e8de', '#fccccb', '#e6a8f0'];
+const DEFAULT_SLIDERS = { speed: 30, mouse: 40, intensity: 50, distortion: 35 };
+
+const MOODS = {
+  calm: {
+    label: 'Calm',
+    message: 'Soft waves, slow breath.',
+    colors: ['#a8d4e6', '#b8e0d2', '#d4e8f0', '#c9dde8', '#b5d4c8'],
+    speed: 20, mouse: 35, intensity: 45, distortion: 25,
+  },
+  dreamy: {
+    label: 'Dreamy',
+    message: 'Floating through pastels.',
+    colors: DEFAULT_COLORS,
+    speed: 30, mouse: 40, intensity: 50, distortion: 35,
+  },
+  bold: {
+    label: 'Bold',
+    message: 'Turn up the volume.',
+    colors: ['#ff6b9d', '#c44dff', '#ff8c42', '#6b5bff', '#ff4d8d'],
+    speed: 45, mouse: 50, intensity: 60, distortion: 50,
+  },
+  cozy: {
+    label: 'Cozy',
+    message: 'Warm blanket energy.',
+    colors: ['#f5c4a8', '#e8b4a0', '#ffd4b8', '#f0a888', '#ffdcc8'],
+    speed: 22, mouse: 38, intensity: 48, distortion: 30,
+  },
+  electric: {
+    label: 'Electric',
+    message: 'Buzzing with ideas.',
+    colors: ['#00e5c7', '#7b61ff', '#ff61dc', '#61d4ff', '#c8ff61'],
+    speed: 50, mouse: 55, intensity: 65, distortion: 55,
+  },
+  mellow: {
+    label: 'Mellow',
+    message: 'Quiet afternoon light.',
+    colors: ['#9aabb8', '#b8a9c9', '#a9b8c4', '#c4b8a9', '#8899aa'],
+    speed: 18, mouse: 30, intensity: 42, distortion: 22,
+  },
+};
+
+let activeMood = null;
 
 function hexToRgb(hex) {
   const value = hex.replace('#', '');
@@ -223,18 +270,90 @@ function isValidHexColor(value) {
   return /^[0-9a-fA-F]{6}$/.test(value);
 }
 
-function loadColorsFromURL() {
-  const params = new URLSearchParams(window.location.search);
+function setColors(colors) {
   colorSliders.forEach((input, i) => {
-    const fromURL = params.get(`c${i + 1}`);
-    if (fromURL && isValidHexColor(fromURL)) {
-      input.value = `#${fromURL}`;
-    }
+    input.value = colors[i];
   });
+}
+
+function setSliders({ speed, mouse, intensity, distortion }) {
+  speedSlider.value = speed;
+  mouseInfluenceSlider.value = mouse;
+  intensitySlider.value = intensity;
+  distortionSlider.value = distortion;
+}
+
+function setActiveMood(moodId) {
+  activeMood = moodId;
+  document.querySelectorAll('.mood-chip').forEach((chip) => {
+    chip.classList.toggle('active', chip.dataset.mood === moodId);
+  });
+}
+
+function clearActiveMood() {
+  activeMood = null;
+  document.querySelectorAll('.mood-chip').forEach((chip) => chip.classList.remove('active'));
+  moodResult.textContent = 'Your own mix — keep tweaking!';
+}
+
+function applyMood(moodId) {
+  const mood = MOODS[moodId];
+  if (!mood) return;
+
+  setColors(mood.colors);
+  setSliders(mood);
+  setActiveMood(moodId);
+  moodResult.textContent = mood.message;
+  updateShareURL();
+}
+
+function resetPalette() {
+  setColors(DEFAULT_COLORS);
+  setSliders(DEFAULT_SLIDERS);
+  setActiveMood('dreamy');
+  moodResult.textContent = MOODS.dreamy.message;
+  updateShareURL();
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const moodParam = params.get('mood');
+  const hasColorParams = colorSliders.some((_, i) => params.has(`c${i + 1}`));
+
+  if (hasColorParams) {
+    colorSliders.forEach((input, i) => {
+      const fromURL = params.get(`c${i + 1}`);
+      if (fromURL && isValidHexColor(fromURL)) {
+        input.value = `#${fromURL}`;
+      }
+    });
+  }
+
+  if (moodParam && MOODS[moodParam]) {
+    if (!hasColorParams) {
+      applyMood(moodParam);
+      return;
+    }
+    const mood = MOODS[moodParam];
+    const colorsMatchMood = colorSliders.every((input, i) =>
+      input.value.toLowerCase() === mood.colors[i].toLowerCase()
+    );
+    if (colorsMatchMood) {
+      setSliders(mood);
+      setActiveMood(moodParam);
+      moodResult.textContent = mood.message;
+      return;
+    }
+  }
+
+  if (hasColorParams) {
+    clearActiveMood();
+  }
 }
 
 function updateShareURL() {
   const params = new URLSearchParams();
+  if (activeMood) params.set('mood', activeMood);
   colorSliders.forEach((input, i) => {
     params.set(`c${i + 1}`, input.value.replace('#', ''));
   });
@@ -244,10 +363,37 @@ function updateShareURL() {
   return url;
 }
 
-loadColorsFromURL();
-colorSliders.forEach((input) => {
-  input.addEventListener('input', updateShareURL);
+Object.keys(MOODS).forEach((moodId) => {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'mood-chip';
+  chip.dataset.mood = moodId;
+  chip.textContent = MOODS[moodId].label;
+  chip.addEventListener('click', () => applyMood(moodId));
+  moodGrid.appendChild(chip);
 });
+
+loadFromURL();
+if (!activeMood && !window.location.search) {
+  setActiveMood('dreamy');
+  moodResult.textContent = MOODS.dreamy.message;
+}
+
+colorSliders.forEach((input) => {
+  input.addEventListener('input', () => {
+    if (activeMood) clearActiveMood();
+    updateShareURL();
+  });
+});
+
+[speedSlider, mouseInfluenceSlider, intensitySlider, distortionSlider].forEach((slider) => {
+  slider.addEventListener('input', () => {
+    if (activeMood) clearActiveMood();
+    updateShareURL();
+  });
+});
+
+resetBtn.addEventListener('click', resetPalette);
 
 shareBtn.addEventListener('click', async () => {
   const url = updateShareURL();

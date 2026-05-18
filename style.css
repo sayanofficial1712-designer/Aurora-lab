@@ -60,28 +60,72 @@ body {
   letter-spacing: 0.3px;
 }
 
+.mood-card {
+  position: fixed;
+  bottom: 72px;
+  left: 72px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 24px;
+  padding: 24px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  max-width: 320px;
+}
+
+.mood-prompt {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(60, 60, 70, 0.9);
+  margin-bottom: 14px;
+}
+
+.mood-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mood-chip {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(60, 60, 70, 0.85);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.mood-chip:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.mood-chip.active {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.mood-result {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  color: rgba(60, 60, 70, 0.65);
+  margin-top: 14px;
+  line-height: 1.4;
+  min-height: 1.2em;
+}
+
 .color-pickers {
   display: flex;
   gap: 10px;
   justify-content: space-between;
 }
 
-.color-picker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.color-picker label {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.65);
-  letter-spacing: 0.2px;
-}
-
-.color-picker input[type="color"] {
+.color-pickers input[type="color"] {
   -webkit-appearance: none;
   appearance: none;
   width: 36px;
@@ -94,18 +138,41 @@ body {
   overflow: hidden;
 }
 
-.color-picker input[type="color"]::-webkit-color-swatch-wrapper {
+.color-pickers input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 
-.color-picker input[type="color"]::-webkit-color-swatch {
+.color-pickers input[type="color"]::-webkit-color-swatch {
   border: none;
   border-radius: 50%;
 }
 
-.color-picker input[type="color"]::-moz-color-swatch {
+.color-pickers input[type="color"]::-moz-color-swatch {
   border: none;
   border-radius: 50%;
+}
+
+.palette-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-btn {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(60, 60, 70, 0.7);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.text-btn:hover {
+  color: rgba(60, 60, 70, 0.95);
 }
 
 .share-btn {
