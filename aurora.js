@@ -39,6 +39,8 @@ const fragmentShaderSource = `
   uniform vec3 color3;
   uniform vec3 color4;
   uniform vec3 color5;
+  uniform float warmCoolShift; // -1.0 cool (sad) → +1.0 warm (happy)
+  uniform float saturationBoost; // additional saturation push from energy
   
   // Simplex noise functions
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -124,11 +126,17 @@ const fragmentShaderSource = `
     // Subtle brightness variation
     float soft = snoise(p * 2.0 + t * 0.05) * 0.04;
     color += soft;
-    
-    // Saturation controlled by intensity
+
+    // Valence-driven warm/cool shift — happy songs warmer, sad cooler
+    // Warm = push red/yellow up, blue down; Cool = inverse.
+    vec3 warmTint = vec3(0.08, 0.02, -0.06);
+    vec3 coolTint = vec3(-0.06, -0.02, 0.10);
+    color += mix(coolTint, warmTint, (warmCoolShift + 1.0) * 0.5) * abs(warmCoolShift);
+
+    // Saturation: base intensity + energy-driven boost
     float gray = dot(color, vec3(0.299, 0.587, 0.114));
-    color = mix(vec3(gray), color, intensity);
-    
+    color = mix(vec3(gray), color, intensity + saturationBoost);
+
     color = clamp(color, 0.0, 1.0);
     
     gl_FragColor = vec4(color, 1.0);
@@ -195,6 +203,8 @@ const color2Location = gl.getUniformLocation(program, 'color2');
 const color3Location = gl.getUniformLocation(program, 'color3');
 const color4Location = gl.getUniformLocation(program, 'color4');
 const color5Location = gl.getUniformLocation(program, 'color5');
+const warmCoolShiftLocation = gl.getUniformLocation(program, 'warmCoolShift');
+const saturationBoostLocation = gl.getUniformLocation(program, 'saturationBoost');
 
 // Control elements
 const speedSlider = document.getElementById('speed');
@@ -440,27 +450,54 @@ function render() {
   // Tick Spotify interpolation (no-op when not connected)
   if (window.tickSpotify) window.tickSpotify();
 
-  // Base values from sliders
+  // Base values from sliders (your mood layer)
   let speed = (speedSlider.value / 100) * 0.6;
   let mouseStrength = (mouseInfluenceSlider.value / 100) * 0.5;
   let intensity = 0.8 + (intensitySlider.value / 100) * 0.6;
   let distortion = (distortionSlider.value / 100) * 0.6;
+  let warmCoolShift = 0.0;
+  let saturationBoost = 0.0;
 
   // Spotify modulation — layered on top, preserves mood as baseline
   if (window.spotifyState && window.spotifyState.connected) {
     const s = window.spotifyState;
 
-    // energy (0–1): faster + more distorted on high-energy songs
-    const energyMod = 0.65 + s.energy * 0.85;
-    speed *= energyMod;
-    distortion *= 0.6 + s.danceability * 0.9;
+    // TEMPO drives the breathing speed of the gradient
+    // Normalize 60–180 BPM around a baseline of 120 → multiplier 0.55× to 1.75×
+    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 120, 0), 1);
+    const tempoMul = 0.55 + tempoNorm * 1.20;
 
-    // valence (0–1): happier songs → slightly more vivid
-    intensity *= 0.9 + s.valence * 0.25;
+    // ENERGY drives speed + distortion strength
+    // Energy 0 → 0.45×, Energy 1 → 1.75×
+    const energyMul = 0.45 + s.energy * 1.30;
 
-    // tempo: normalise 60–200 BPM → subtle pulse on speed
-    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 140, 0), 1);
-    speed *= 0.85 + tempoNorm * 0.3;
+    speed = speed * tempoMul * (0.6 + s.energy * 0.9);
+    distortion = distortion * (0.5 + s.energy * 1.1);
+
+    // DANCEABILITY drives fluidity/wave motion
+    distortion *= 0.7 + s.danceability * 0.8;
+
+    // VALENCE drives warm/cool color shift (the big visible change)
+    // 0 (sad) → -0.7 cool, 0.5 → 0 neutral, 1.0 (happy) → +0.7 warm
+    warmCoolShift = (s.valence - 0.5) * 1.4;
+
+    // Energy also nudges saturation slightly (vivid on intense tracks)
+    saturationBoost = (s.energy - 0.5) * 0.25;
+
+    // Debug log every ~2s
+    if (!window._lastSpotifyLog || elapsed - window._lastSpotifyLog > 2) {
+      window._lastSpotifyLog = elapsed;
+      console.log('[Aurora] live mapping',
+        `energy:${s.energy.toFixed(2)}`,
+        `valence:${s.valence.toFixed(2)}`,
+        `tempo:${s.tempo.toFixed(0)}`,
+        `dance:${s.danceability.toFixed(2)}`,
+        '→',
+        `speed:${speed.toFixed(2)}`,
+        `dist:${distortion.toFixed(2)}`,
+        `warmCool:${warmCoolShift.toFixed(2)}`,
+        `satBoost:${saturationBoost.toFixed(2)}`);
+    }
   }
 
   gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
@@ -470,6 +507,8 @@ function render() {
   gl.uniform1f(mouseStrengthLocation, mouseStrength);
   gl.uniform1f(intensityLocation, intensity);
   gl.uniform1f(distortionLocation, distortion);
+  gl.uniform1f(warmCoolShiftLocation, warmCoolShift);
+  gl.uniform1f(saturationBoostLocation, saturationBoost);
 
   const colorLocations = [color1Location, color2Location, color3Location, color4Location, color5Location];
   colorSliders.forEach((input, i) => {
