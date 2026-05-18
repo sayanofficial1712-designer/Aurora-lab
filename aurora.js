@@ -437,32 +437,12 @@ function render() {
   mouse.x += (targetMouse.x - mouse.x) * 0.06;
   mouse.y += (targetMouse.y - mouse.y) * 0.06;
   
-  // Tick Spotify interpolation (no-op when not connected)
-  if (window.tickSpotify) window.tickSpotify();
-
-  // Base values from sliders
-  let speed = (speedSlider.value / 100) * 0.6;
-  let mouseStrength = (mouseInfluenceSlider.value / 100) * 0.5;
-  let intensity = 0.8 + (intensitySlider.value / 100) * 0.6;
-  let distortion = (distortionSlider.value / 100) * 0.6;
-
-  // Spotify modulation — layered on top, preserves mood as baseline
-  if (window.spotifyState && window.spotifyState.connected) {
-    const s = window.spotifyState;
-
-    // energy (0–1): faster + more distorted on high-energy songs
-    const energyMod = 0.65 + s.energy * 0.85;
-    speed *= energyMod;
-    distortion *= 0.6 + s.danceability * 0.9;
-
-    // valence (0–1): happier songs → slightly more vivid
-    intensity *= 0.9 + s.valence * 0.25;
-
-    // tempo: normalise 60–200 BPM → subtle pulse on speed
-    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 140, 0), 1);
-    speed *= 0.85 + tempoNorm * 0.3;
-  }
-
+  // Read control values and map to shader ranges
+  const speed = (speedSlider.value / 100) * 0.6;           // 0 to 0.6
+  const mouseStrength = (mouseInfluenceSlider.value / 100) * 0.5;  // 0 to 0.5
+  const intensity = 0.8 + (intensitySlider.value / 100) * 0.6;     // 0.8 to 1.4
+  const distortion = (distortionSlider.value / 100) * 0.6;         // 0 to 0.6
+  
   gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
   gl.uniform1f(timeLocation, elapsed);
   gl.uniform2f(mouseLocation, mouse.x, mouse.y);
