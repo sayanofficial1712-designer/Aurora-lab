@@ -39,9 +39,6 @@ window.tickSpotify = function () {
   s.valence = lerp(s.valence, _target.valence, speed);
   s.tempo = lerp(s.tempo, _target.tempo, speed);
   s.danceability = lerp(s.danceability, _target.danceability, speed);
-
-  const bar = document.getElementById('spotifyEnergyFill');
-  if (bar) bar.style.width = `${Math.round(s.energy * 100)}%`;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -263,12 +260,15 @@ async function _deriveFeatures(token, track) {
 let _pollInterval = null;
 let _lastTrackId = null;
 
-async function _loadTrackFeatures(token, track) {
+async function _loadTrackAndApplyMood(token, track) {
   const features = await _deriveFeatures(token, track);
   _applyFeatures(features, true);
 
-  console.log('%c[Aurora × Spotify] ✓ Aurora reacting', 'color:#1DB954;font-weight:bold', {
+  const mood = _detectMood(features);
+
+  console.log('%c[Aurora × Spotify] ✓ Mood detected', 'color:#1DB954;font-weight:bold', {
     track: features._track,
+    mood,
     source: features._source,
     genres: features._genres.length ? features._genres.slice(0, 3) : '(none)',
     energy: +features.energy.toFixed(2),
@@ -276,6 +276,12 @@ async function _loadTrackFeatures(token, track) {
     tempo: Math.round(features.tempo),
     danceability: +features.danceability.toFixed(2),
   });
+
+  if (typeof window.transitionToMood === 'function') {
+    window.transitionToMood(mood, 1800);
+  }
+
+  _announceMood(mood, track);
 }
 
 async function _poll() {
@@ -288,13 +294,13 @@ async function _poll() {
       return;
     }
 
-    _setTrackDisplay(data.item);
+    _setTrackDisplay(data.item, data.is_playing !== false);
 
     if (data.item.id !== _lastTrackId) {
       _lastTrackId = data.item.id;
       console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
         `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
-      await _loadTrackFeatures(token, data.item);
+      await _loadTrackAndApplyMood(token, data.item);
     }
   } catch (err) {
     console.warn('[Aurora × Spotify]', err.message);
@@ -314,23 +320,68 @@ function _applyFeatures(features, snap = false) {
     s.valence = features.valence;
     s.tempo = features.tempo;
     s.danceability = features.danceability;
-    const bar = document.getElementById('spotifyEnergyFill');
-    if (bar) bar.style.width = `${Math.round(features.energy * 100)}%`;
   }
 }
 
 // ─────────────────────────────────────────────────────────────
 // UI helpers
 // ─────────────────────────────────────────────────────────────
-function _setTrackDisplay(track) {
-  const el = document.getElementById('spotifyTrack');
-  if (!el) return;
+// Mood detection from derived features → maps to one of the 6 mood chips
+function _detectMood(features) {
+  const { energy, valence, danceability, tempo } = features;
+
+  if (energy >= 0.78 && (danceability >= 0.75 || tempo >= 128)) return 'electric';
+  if (energy >= 0.7 && valence >= 0.6) return 'bold';
+  if (energy >= 0.35 && valence >= 0.55 && tempo < 125) return 'cozy';
+  if (energy >= 0.35) return 'dreamy';
+  if (valence >= 0.4) return 'calm';
+  return 'mellow';
+}
+
+const _MOOD_COPY = {
+  calm: 'sounds like a calm moment',
+  dreamy: 'sounds dreamy and floating',
+  bold: 'feels confident and bold',
+  cozy: 'has a cozy, warm pull',
+  electric: 'is buzzing with energy',
+  mellow: 'carries a mellow weight',
+};
+
+function _setTrackDisplay(track, isPlaying = true) {
+  const trackEl = document.getElementById('spotifyTrack');
+  const artistEl = document.getElementById('spotifyArtist');
+  const artEl = document.getElementById('vinylArt');
+  const discEl = document.getElementById('vinylDisc');
+  const moodDetectEl = document.getElementById('moodDetect');
+
+  if (!trackEl) return;
+
   if (!track) {
-    el.textContent = 'Nothing playing — open Spotify and play a song';
+    trackEl.textContent = 'Waiting for music…';
+    if (artistEl) artistEl.textContent = 'Open Spotify and press play';
+    if (artEl) { artEl.removeAttribute('src'); artEl.classList.remove('loaded'); }
+    if (discEl) discEl.classList.add('paused');
+    if (moodDetectEl) moodDetectEl.textContent = '';
     return;
   }
-  const artists = track.artists.map((a) => a.name).join(', ');
-  el.textContent = `${track.name}  ·  ${artists}`;
+
+  trackEl.textContent = track.name;
+  if (artistEl) artistEl.textContent = track.artists.map((a) => a.name).join(', ');
+
+  const artUrl = track.album?.images?.[0]?.url;
+  if (artEl && artUrl && artEl.src !== artUrl) {
+    artEl.classList.remove('loaded');
+    artEl.onload = () => artEl.classList.add('loaded');
+    artEl.src = artUrl;
+  }
+
+  if (discEl) discEl.classList.toggle('paused', !isPlaying);
+}
+
+function _announceMood(mood, track) {
+  const el = document.getElementById('moodDetect');
+  if (!el || !mood) return;
+  el.innerHTML = `This song ${_MOOD_COPY[mood] || 'feels unique'} <strong>${mood}</strong>`;
 }
 
 function _setConnectedUI(connected) {

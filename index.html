@@ -30,15 +30,22 @@
       </button>
 
       <div class="spotify-connected" id="spotifyConnected">
-        <div class="spotify-now-playing" id="spotifyNowPlaying">
-          <div class="spotify-track-info">
-            <span class="spotify-track-label">Now playing</span>
-            <span class="spotify-track-name" id="spotifyTrack">Nothing playing yet</span>
+        <div class="vinyl-now-playing" id="spotifyNowPlaying">
+          <div class="vinyl-stage">
+            <div class="vinyl-aura"></div>
+            <div class="vinyl-disc" id="vinylDisc">
+              <img class="vinyl-art" id="vinylArt" alt="" />
+              <div class="vinyl-grooves"></div>
+              <div class="vinyl-label-dot"></div>
+            </div>
           </div>
-          <div class="spotify-energy-bar">
-            <div class="spotify-energy-fill" id="spotifyEnergyFill"></div>
+          <div class="vinyl-info">
+            <span class="vinyl-now-label">Now playing</span>
+            <span class="vinyl-track" id="spotifyTrack">Waiting for music…</span>
+            <span class="vinyl-artist" id="spotifyArtist">Open Spotify and press play</span>
           </div>
         </div>
+        <p class="mood-detect" id="moodDetect"></p>
         <button type="button" class="spotify-disconnect-btn" id="spotifyDisconnectBtn">Disconnect</button>
       </div>
     </div>

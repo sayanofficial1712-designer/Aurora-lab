@@ -285,6 +285,25 @@ function isValidHexColor(value) {
   return /^[0-9a-fA-F]{6}$/.test(value);
 }
 
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function lerpHex(a, b, t) {
+  const ar = parseInt(a.slice(1, 3), 16);
+  const ag = parseInt(a.slice(3, 5), 16);
+  const ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16);
+  const bg = parseInt(b.slice(3, 5), 16);
+  const bb = parseInt(b.slice(5, 7), 16);
+  const r = Math.round(lerp(ar, br, t));
+  const g = Math.round(lerp(ag, bg, t));
+  const bl = Math.round(lerp(ab, bb, t));
+  return '#' + [r, g, bl].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 function setColors(colors) {
   colorSliders.forEach((input, i) => {
     input.value = colors[i];
@@ -311,24 +330,56 @@ function clearActiveMood() {
   moodResult.textContent = 'Your own mix — keep tweaking!';
 }
 
-function applyMood(moodId) {
+let _transitionToken = 0;
+
+function transitionToMood(moodId, duration = 1600) {
   const mood = MOODS[moodId];
   if (!mood) return;
 
-  setColors(mood.colors);
-  setSliders(mood);
+  const myToken = ++_transitionToken;
+
   setActiveMood(moodId);
   moodResult.textContent = mood.message;
-  updateShareURL();
+
+  const startColors = colorSliders.map((i) => i.value);
+  const startVals = {
+    speed: +speedSlider.value,
+    mouse: +mouseInfluenceSlider.value,
+    intensity: +intensitySlider.value,
+    distortion: +distortionSlider.value,
+  };
+  const endVals = { speed: mood.speed, mouse: mood.mouse, intensity: mood.intensity, distortion: mood.distortion };
+
+  const start = performance.now();
+
+  function tick() {
+    if (myToken !== _transitionToken) return;
+    const raw = Math.min(1, (performance.now() - start) / duration);
+    const t = easeInOutCubic(raw);
+
+    colorSliders.forEach((input, i) => {
+      input.value = lerpHex(startColors[i], mood.colors[i], t);
+    });
+    speedSlider.value = Math.round(lerp(startVals.speed, endVals.speed, t));
+    mouseInfluenceSlider.value = Math.round(lerp(startVals.mouse, endVals.mouse, t));
+    intensitySlider.value = Math.round(lerp(startVals.intensity, endVals.intensity, t));
+    distortionSlider.value = Math.round(lerp(startVals.distortion, endVals.distortion, t));
+
+    if (raw < 1) requestAnimationFrame(tick);
+    else updateShareURL();
+  }
+  tick();
+}
+
+function applyMood(moodId) {
+  transitionToMood(moodId, 1400);
 }
 
 function resetPalette() {
-  setColors(DEFAULT_COLORS);
-  setSliders(DEFAULT_SLIDERS);
-  setActiveMood('dreamy');
-  moodResult.textContent = MOODS.dreamy.message;
-  updateShareURL();
+  transitionToMood('dreamy', 1400);
 }
+
+window.transitionToMood = transitionToMood;
 
 function loadFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -463,45 +514,9 @@ function render() {
   let warmCoolShift = 0.0;
   let saturationBoost = 0.0;
 
-  // Spotify modulation — amplified for clear, dramatic differences between songs
-  if (window.spotifyState && window.spotifyState.connected) {
-    const s = window.spotifyState;
-
-    // TEMPO drives breathing speed — 60 BPM → 0.35×, 160+ BPM → 2.6×
-    const tempoNorm = Math.min(Math.max((s.tempo - 60) / 100, 0), 1);
-    const tempoMul = 0.35 + tempoNorm * 2.25;
-
-    // ENERGY drives speed + distortion massively — 0 → 0.3×, 1 → 2.8×
-    const energyMul = 0.3 + s.energy * 2.5;
-
-    // DANCEABILITY drives fluidity — 0 → 0.5×, 1 → 2.2×
-    const danceMul = 0.5 + s.danceability * 1.7;
-
-    speed = Math.max(0.05, speed) * tempoMul * (0.4 + s.energy * 1.4);
-    distortion = Math.max(0.08, distortion) * energyMul * 0.7 + 0.05 * s.danceability;
-    distortion *= 0.6 + s.danceability * 0.9;
-
-    // VALENCE drives strong warm/cool shift — sad = -1.0 cool, happy = +1.0 warm
-    warmCoolShift = (s.valence - 0.5) * 2.0;
-    warmCoolShift = Math.max(-1.0, Math.min(1.0, warmCoolShift));
-
-    // Saturation: low-energy/sad songs desaturate, high-energy/happy songs boost
-    // Range: -0.45 (very desaturated) to +0.45 (very vivid)
-    const moodScore = (s.energy + s.valence) / 2;
-    saturationBoost = (moodScore - 0.5) * 0.9;
-
-    // Mouse strength softens on calm tracks
-    mouseStrength *= 0.6 + s.energy * 0.8;
-
-    // Debug log every ~1.5s
-    if (!window._lastSpotifyLog || elapsed - window._lastSpotifyLog > 1.5) {
-      window._lastSpotifyLog = elapsed;
-      console.log('%c[Aurora] mapping', 'color:#1DB954',
-        `E:${s.energy.toFixed(2)} V:${s.valence.toFixed(2)} BPM:${s.tempo.toFixed(0)} D:${s.danceability.toFixed(2)}`,
-        '→',
-        `speed:${speed.toFixed(2)} dist:${distortion.toFixed(2)} warmCool:${warmCoolShift.toFixed(2)} sat:${saturationBoost.toFixed(2)}`);
-    }
-  }
+  // Spotify drives mood transitions (not per-frame shader modulation).
+  // Mood values flow naturally through the sliders + color pickers above.
+  // warmCoolShift and saturationBoost stay neutral here.
 
   gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
   gl.uniform1f(timeLocation, elapsed);

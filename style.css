@@ -172,51 +172,151 @@ body {
 .spotify-connected {
   display: none;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.spotify-now-playing {
+/* ── Vinyl Now Playing ── */
+.vinyl-now-playing {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-.spotify-track-info {
+.vinyl-stage {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.vinyl-aura {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.32), transparent 70%);
+  filter: blur(6px);
+  animation: vinylPulse 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes vinylPulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.18); }
+}
+
+.vinyl-disc {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #0d0d10;
+  overflow: hidden;
+  animation: vinylSpin 9s linear infinite;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.vinyl-disc.paused {
+  animation-play-state: paused;
+}
+
+@keyframes vinylSpin {
+  to { transform: rotate(360deg); }
+}
+
+.vinyl-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.vinyl-art.loaded {
+  opacity: 1;
+}
+
+.vinyl-grooves {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.08) 0px,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.vinyl-label-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 30%, rgba(255, 255, 255, 0.6) 32%, rgba(0, 0, 0, 0.55) 70%);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
+.vinyl-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
-.spotify-track-label {
+.vinyl-now-label {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 9px;
+  font-weight: 600;
   color: #1DB954;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
-.spotify-track-name {
+.vinyl-track {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.9);
-  line-height: 1.3;
-}
-
-.spotify-energy-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(40, 40, 55, 0.92);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
-.spotify-energy-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #1DB954, #1ed760);
-  border-radius: 2px;
-  width: 50%;
-  transition: width 2s ease;
+.vinyl-artist {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  color: rgba(60, 60, 70, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.mood-detect {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  color: rgba(60, 60, 70, 0.7);
+  font-style: italic;
+  min-height: 1em;
+}
+
+.mood-detect strong {
+  color: #1DB954;
+  font-style: normal;
+  font-weight: 600;
 }
 
 .spotify-disconnect-btn {
