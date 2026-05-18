@@ -34,13 +34,12 @@ window.tickSpotify = function () {
   if (!window.spotifyState.connected) return;
   const s = window.spotifyState;
   const lerp = (a, b, t) => a + (b - a) * t;
-  const speed = 0.015; // gentle transition between songs
+  const speed = 0.025; // smooth but noticeable transitions between songs
   s.energy = lerp(s.energy, _target.energy, speed);
   s.valence = lerp(s.valence, _target.valence, speed);
   s.tempo = lerp(s.tempo, _target.tempo, speed);
   s.danceability = lerp(s.danceability, _target.danceability, speed);
 
-  // Update visual energy bar in UI
   const bar = document.getElementById('spotifyEnergyFill');
   if (bar) bar.style.width = `${Math.round(s.energy * 100)}%`;
 };
@@ -159,11 +158,70 @@ async function _fetchAudioFeatures(token, trackId) {
   return resp.json();
 }
 
+async function _fetchArtist(token, artistId) {
+  const resp = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error(`Artist ${resp.status}`);
+  return resp.json();
+}
+
+// Genre → audio-feature heuristics (used when audio-features is blocked/403)
+const _GENRE_PROFILES = [
+  { match: /(edm|electronic|house|techno|trance|dubstep|dance)/i, energy: 0.85, valence: 0.7, tempo: 128, danceability: 0.85 },
+  { match: /(rock|metal|punk|grunge)/i,                         energy: 0.8,  valence: 0.55, tempo: 130, danceability: 0.55 },
+  { match: /(hip\s?hop|rap|trap|drill)/i,                       energy: 0.75, valence: 0.55, tempo: 95,  danceability: 0.8  },
+  { match: /(pop)/i,                                             energy: 0.7,  valence: 0.7,  tempo: 115, danceability: 0.75 },
+  { match: /(r&b|soul|funk|disco)/i,                             energy: 0.6,  valence: 0.7,  tempo: 100, danceability: 0.8  },
+  { match: /(latin|reggaeton|salsa|samba|bossa)/i,               energy: 0.75, valence: 0.8,  tempo: 100, danceability: 0.85 },
+  { match: /(jazz|blues|swing)/i,                                energy: 0.45, valence: 0.55, tempo: 110, danceability: 0.55 },
+  { match: /(folk|acoustic|singer-songwriter|indie\s*folk)/i,    energy: 0.4,  valence: 0.5,  tempo: 95,  danceability: 0.45 },
+  { match: /(classical|orchestral|piano|baroque|opera)/i,        energy: 0.35, valence: 0.45, tempo: 90,  danceability: 0.3  },
+  { match: /(ambient|chill|lofi|lo-fi|new age|downtempo)/i,      energy: 0.3,  valence: 0.45, tempo: 80,  danceability: 0.5  },
+  { match: /(country)/i,                                          energy: 0.55, valence: 0.6,  tempo: 105, danceability: 0.55 },
+  { match: /(k-pop|j-pop|anime)/i,                               energy: 0.8,  valence: 0.75, tempo: 120, danceability: 0.8  },
+];
+
+// Fallback: derive features from track metadata when /audio-features is blocked
+async function _deriveFeaturesFallback(token, track) {
+  let genres = [];
+  try {
+    if (track.artists && track.artists[0]) {
+      const artist = await _fetchArtist(token, track.artists[0].id);
+      genres = artist.genres || [];
+    }
+  } catch (e) {
+    console.warn('[Aurora × Spotify] artist fetch failed:', e.message);
+  }
+
+  const matched = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
+  const base = matched || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
+
+  // Popularity nudge (more popular tracks tend to be slightly more energetic/upbeat)
+  const popularity = (track.popularity ?? 50) / 100;
+  const energy = Math.min(1, base.energy * (0.85 + popularity * 0.3));
+  const valence = Math.min(1, base.valence * (0.9 + popularity * 0.2));
+
+  // Vary slightly by track id so different songs in same genre differ
+  const seed = (track.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const jitter = (((seed % 100) / 100) - 0.5) * 0.15;
+
+  return {
+    energy: Math.min(1, Math.max(0, energy + jitter)),
+    valence: Math.min(1, Math.max(0, valence + jitter)),
+    tempo: base.tempo + jitter * 30,
+    danceability: Math.min(1, Math.max(0, base.danceability + jitter)),
+    _source: matched ? `fallback:${matched.match}` : 'fallback:default',
+    _genres: genres,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────
 // Polling loop
 // ─────────────────────────────────────────────────────────────
 let _pollInterval = null;
 let _lastTrackId = null;
+let _audioFeaturesBlocked = false; // becomes true after first 403, then we skip it
 
 async function _poll() {
   try {
@@ -179,8 +237,42 @@ async function _poll() {
 
     if (data.item.id !== _lastTrackId) {
       _lastTrackId = data.item.id;
-      const features = await _fetchAudioFeatures(token, data.item.id);
+      console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
+        `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
+
+      let features = null;
+      let usedFallback = false;
+
+      if (!_audioFeaturesBlocked) {
+        try {
+          features = await _fetchAudioFeatures(token, data.item.id);
+          features._source = 'audio-features';
+        } catch (e) {
+          if (e.message.includes('403') || e.message.includes('401')) {
+            console.warn('[Aurora × Spotify] /audio-features blocked (likely deprecated for new apps). Switching to genre-based fallback.');
+            _audioFeaturesBlocked = true;
+          } else {
+            console.warn('[Aurora × Spotify] audio-features failed:', e.message);
+          }
+        }
+      }
+
+      if (!features) {
+        features = await _deriveFeaturesFallback(token, data.item);
+        usedFallback = true;
+      }
+
       _applyFeatures(features);
+
+      console.log('[Aurora × Spotify] Features', {
+        source: features._source,
+        ...(features._genres ? { genres: features._genres } : {}),
+        energy: +features.energy.toFixed(2),
+        valence: +features.valence.toFixed(2),
+        tempo: +features.tempo.toFixed(0),
+        danceability: +features.danceability.toFixed(2),
+        fallback: usedFallback,
+      });
     }
   } catch (err) {
     console.warn('[Aurora × Spotify]', err.message);
@@ -222,8 +314,9 @@ function _setConnectedUI(connected) {
 async function _connect(token) {
   window.spotifyState.connected = true;
   _setConnectedUI(true);
+  console.log('%c[Aurora × Spotify] Connected', 'color:#1DB954;font-weight:bold');
   await _poll();
-  _pollInterval = setInterval(_poll, 8000);
+  _pollInterval = setInterval(_poll, 4000);
 }
 
 function _disconnect() {
