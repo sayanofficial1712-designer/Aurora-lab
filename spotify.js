@@ -250,6 +250,8 @@ async function _playTrackUri(uri, trackName) {
 function _updatePlayPauseUI() {
   const btn = document.getElementById('playPauseBtn');
   if (btn) btn.classList.toggle('playing', _isPlaying);
+  const mini = document.getElementById('miMiniPlayBtn');
+  if (mini) mini.classList.toggle('playing', _isPlaying);
 }
 
 // ─── Progress bar ───
@@ -642,22 +644,31 @@ const _MOOD_COPY = {
 };
 
 function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
+  // Bottom dock
   const trackEl = document.getElementById('spotifyTrack');
   const artistEl = document.getElementById('spotifyArtist');
   const artEl = document.getElementById('vinylArt');
   const discEl = document.getElementById('vinylDisc');
-  const moodDetectEl = document.getElementById('moodDetect');
-  // Center-stage Now Playing
+  // Right-panel Now Playing card
+  const miTrackName = document.getElementById('miTrackName');
+  const miTrackArtist = document.getElementById('miTrackArtist');
+  const miAlbumArt = document.getElementById('miAlbumArt');
+  // Center stage
   const npTrackEl = document.getElementById('npTrack');
   const npArtistEl = document.getElementById('npArtist');
+  // Status
+  const moodDetectEl = document.getElementById('moodDetect');
 
   if (!trackEl) return;
 
   if (!track) {
     trackEl.textContent = 'Nothing playing';
     if (artistEl) artistEl.textContent = 'Connect Spotify to begin';
-    if (npTrackEl) npTrackEl.textContent = 'A quiet aurora is waiting';
-    if (npArtistEl) npArtistEl.textContent = 'Connect Spotify or pick a mood';
+    if (miTrackName) miTrackName.textContent = 'Nothing playing';
+    if (miTrackArtist) miTrackArtist.textContent = '—';
+    if (miAlbumArt) miAlbumArt.removeAttribute('src');
+    if (npTrackEl) npTrackEl.textContent = 'Choose a mood or connect music';
+    if (npArtistEl) npArtistEl.textContent = '';
     if (artEl) { artEl.removeAttribute('src'); artEl.classList.remove('loaded'); }
     if (discEl) discEl.classList.add('paused');
     if (moodDetectEl) moodDetectEl.textContent = '';
@@ -665,10 +676,14 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
     return;
   }
 
+  const artists = track.artists.map((a) => a.name).join(', ');
+
   trackEl.textContent = track.name;
-  if (artistEl) artistEl.textContent = track.artists.map((a) => a.name).join(', ');
+  if (artistEl) artistEl.textContent = artists;
+  if (miTrackName) miTrackName.textContent = track.name;
+  if (miTrackArtist) miTrackArtist.textContent = artists;
   if (npTrackEl) npTrackEl.textContent = track.name;
-  if (npArtistEl) npArtistEl.textContent = track.artists.map((a) => a.name).join(', ');
+  if (npArtistEl) npArtistEl.textContent = artists;
 
   const artUrl = track.album?.images?.[0]?.url;
   if (artEl && artUrl && artEl.src !== artUrl) {
@@ -676,6 +691,7 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
     artEl.onload = () => artEl.classList.add('loaded');
     artEl.src = artUrl;
   }
+  if (miAlbumArt && artUrl && miAlbumArt.src !== artUrl) miAlbumArt.src = artUrl;
 
   if (discEl) discEl.classList.toggle('paused', !isPlaying);
 
@@ -799,7 +815,7 @@ _searchInput.addEventListener('keydown', (e) => {
 
 // Close results when clicking outside
 document.addEventListener('click', (e) => {
-  const section = document.querySelector('.search-bar');
+  const section = document.querySelector('.mi-search-wrap');
   if (section && !section.contains(e.target)) _hideSearchResults();
 });
 
@@ -824,25 +840,25 @@ if (_progressTrack) {
   });
 }
 
-// ─── Mood Lock toggle (also drives AUTO toggle in Mood Lab) ───
-const _moodLockBtn = document.getElementById('moodLockBtn');
-const _autoToggleInput = document.getElementById('autoToggle');
+// ─── Auto/Manual segmented control ───
 function _setAutoMode(on) {
   window._auroraAutoMode = on;
-  if (_autoToggleInput) _autoToggleInput.checked = on;
-  if (_moodLockBtn) _moodLockBtn.classList.toggle('locked', !on);
+  const onRadio = document.getElementById('autoOn');
+  const offRadio = document.getElementById('autoOff');
+  if (onRadio && offRadio) {
+    onRadio.checked = on;
+    offRadio.checked = !on;
+  }
 }
-if (_moodLockBtn) {
-  _moodLockBtn.addEventListener('click', () => {
-    _setAutoMode(!_autoToggleInput?.checked);
-  });
-}
-if (_autoToggleInput) {
-  _autoToggleInput.addEventListener('change', (e) => {
-    _setAutoMode(e.target.checked);
-  });
-}
+['autoOn', 'autoOff'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => _setAutoMode(id === 'autoOn'));
+});
 _setAutoMode(true);
+
+// ─── Mini play/pause button in Mood Instrument ───
+const _miMiniPlayBtn = document.getElementById('miMiniPlayBtn');
+if (_miMiniPlayBtn) _miMiniPlayBtn.addEventListener('click', _playPause);
 
 // ─── Expand / Focus mode ───
 const _expandBtn = document.getElementById('expandBtn');
@@ -852,10 +868,3 @@ if (_expandBtn) {
   });
 }
 
-// ─── Left-sidebar nav: Search item focuses the center search input ───
-document.querySelectorAll('.nav-item').forEach((item) => {
-  item.addEventListener('click', () => {
-    const nav = item.dataset.nav;
-    if (nav === 'search') _searchInput.focus();
-  });
-});

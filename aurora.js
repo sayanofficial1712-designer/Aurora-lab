@@ -517,21 +517,9 @@ window.addEventListener('mouseleave', () => {
   targetMouse.y = 0.5;
 });
 
-// ─── Adaptive glass: sample palette luminance and toggle body class ───
-// Uses the current 5 colors of the gradient as a cheap luminance proxy.
-let _lumSmoothed = 0.5;
-function _updateAdaptiveGlass() {
-  const colors = colorSliders.map((input) => hexToRgb(input.value));
-  let totalLum = 0;
-  for (const [r, g, b] of colors) {
-    totalLum += 0.299 * r + 0.587 * g + 0.114 * b;
-  }
-  const target = totalLum / colors.length;
-  _lumSmoothed += (target - _lumSmoothed) * 0.08;
-  document.body.classList.toggle('aurora-bright', _lumSmoothed > 0.62);
-}
-setInterval(_updateAdaptiveGlass, 250);
-_updateAdaptiveGlass();
+// Brand button — soft reset to dreamy default
+const brandBtn = document.getElementById('brandBtn');
+if (brandBtn) brandBtn.addEventListener('click', () => transitionToMood('dreamy', 1600));
 
 function render() {
   const elapsed = (Date.now() - startTime) / 1000;
