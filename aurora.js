@@ -227,46 +227,52 @@ const shareBtn = document.getElementById('shareBtn');
 const resetBtn = document.getElementById('resetBtn');
 const moodGrid = document.getElementById('moodGrid');
 const moodResult = document.getElementById('moodResult');
+const sliderValueLabels = {
+  speed: document.getElementById('speedValue'),
+  mouse: document.getElementById('mouseValue'),
+  intensity: document.getElementById('intensityValue'),
+  distortion: document.getElementById('distortionValue'),
+};
 
 const DEFAULT_COLORS = ['#f5a8d1', '#c4b8f5', '#a8e8de', '#fccccb', '#e6a8f0'];
-const DEFAULT_SLIDERS = { speed: 30, mouse: 40, intensity: 50, distortion: 35 };
+const DEFAULT_SLIDERS = { speed: 30, mouse: 30, intensity: 40, distortion: 40 };
 
 const MOODS = {
   calm: {
     label: 'Calm',
     message: 'Soft waves, slow breath.',
     colors: ['#a8d4e6', '#b8e0d2', '#d4e8f0', '#c9dde8', '#b5d4c8'],
-    speed: 20, mouse: 35, intensity: 45, distortion: 25,
+    speed: 15, mouse: 20, intensity: 25, distortion: 15,
   },
   dreamy: {
     label: 'Dreamy',
     message: 'Floating through pastels.',
     colors: DEFAULT_COLORS,
-    speed: 30, mouse: 40, intensity: 50, distortion: 35,
+    speed: 30, mouse: 30, intensity: 40, distortion: 40,
   },
   bold: {
     label: 'Bold',
     message: 'Turn up the volume.',
     colors: ['#ff6b9d', '#c44dff', '#ff8c42', '#6b5bff', '#ff4d8d'],
-    speed: 45, mouse: 50, intensity: 60, distortion: 50,
+    speed: 42, mouse: 35, intensity: 48, distortion: 45,
   },
   cozy: {
     label: 'Cozy',
     message: 'Warm blanket energy.',
     colors: ['#f5c4a8', '#e8b4a0', '#ffd4b8', '#f0a888', '#ffdcc8'],
-    speed: 22, mouse: 38, intensity: 48, distortion: 30,
+    speed: 24, mouse: 28, intensity: 38, distortion: 28,
   },
   electric: {
     label: 'Electric',
     message: 'Buzzing with ideas.',
     colors: ['#00e5c7', '#7b61ff', '#ff61dc', '#61d4ff', '#c8ff61'],
-    speed: 50, mouse: 55, intensity: 65, distortion: 55,
+    speed: 50, mouse: 45, intensity: 50, distortion: 50,
   },
   mellow: {
     label: 'Mellow',
     message: 'Quiet afternoon light.',
     colors: ['#9aabb8', '#b8a9c9', '#a9b8c4', '#c4b8a9', '#8899aa'],
-    speed: 18, mouse: 30, intensity: 42, distortion: 22,
+    speed: 18, mouse: 22, intensity: 24, distortion: 20,
   },
 };
 
@@ -315,6 +321,14 @@ function setSliders({ speed, mouse, intensity, distortion }) {
   mouseInfluenceSlider.value = mouse;
   intensitySlider.value = intensity;
   distortionSlider.value = distortion;
+  updateSliderLabels();
+}
+
+function updateSliderLabels() {
+  sliderValueLabels.speed.textContent = speedSlider.value;
+  sliderValueLabels.mouse.textContent = mouseInfluenceSlider.value;
+  sliderValueLabels.intensity.textContent = intensitySlider.value;
+  sliderValueLabels.distortion.textContent = distortionSlider.value;
 }
 
 function setActiveMood(moodId) {
@@ -364,6 +378,7 @@ function transitionToMood(moodId, duration = 1600) {
     mouseInfluenceSlider.value = Math.round(lerp(startVals.mouse, endVals.mouse, t));
     intensitySlider.value = Math.round(lerp(startVals.intensity, endVals.intensity, t));
     distortionSlider.value = Math.round(lerp(startVals.distortion, endVals.distortion, t));
+    updateSliderLabels();
 
     if (raw < 1) requestAnimationFrame(tick);
     else updateShareURL();
@@ -441,9 +456,11 @@ Object.keys(MOODS).forEach((moodId) => {
 
 loadFromURL();
 if (!activeMood && !window.location.search) {
+  setSliders(DEFAULT_SLIDERS);
   setActiveMood('dreamy');
   moodResult.textContent = MOODS.dreamy.message;
 }
+updateSliderLabels();
 
 colorSliders.forEach((input) => {
   input.addEventListener('input', () => {
@@ -455,6 +472,7 @@ colorSliders.forEach((input) => {
 [speedSlider, mouseInfluenceSlider, intensitySlider, distortionSlider].forEach((slider) => {
   slider.addEventListener('input', () => {
     if (activeMood) clearActiveMood();
+    updateSliderLabels();
     updateShareURL();
   });
 });
@@ -506,11 +524,12 @@ function render() {
   // Tick Spotify interpolation (no-op when not connected)
   if (window.tickSpotify) window.tickSpotify();
 
-  // Base values from sliders (your mood layer)
-  let speed = (speedSlider.value / 100) * 0.6;
-  let mouseStrength = (mouseInfluenceSlider.value / 100) * 0.5;
-  let intensity = 0.8 + (intensitySlider.value / 100) * 0.6;
-  let distortion = (distortionSlider.value / 100) * 0.6;
+  // Base values from the 10-50 mood scale.
+  const scaleValue = (input) => (Number(input.value) - 10) / 40;
+  let speed = 0.08 + scaleValue(speedSlider) * 0.62;
+  let mouseStrength = 0.05 + scaleValue(mouseInfluenceSlider) * 0.45;
+  let intensity = 0.7 + scaleValue(intensitySlider) * 0.8;
+  let distortion = 0.08 + scaleValue(distortionSlider) * 0.65;
   let warmCoolShift = 0.0;
   let saturationBoost = 0.0;
 

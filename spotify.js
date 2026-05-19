@@ -184,11 +184,38 @@ const _GENRE_PROFILES = [
 
 // Keyword hints in track/album titles — pushed further to extremes
 const _TITLE_HINTS = [
-  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25 },
-  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i,           energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3  },
-  { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i,                   energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95 },
-  { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i,                    energy: 0.7,  valence: 0.85, tempo: 115, danceability: 0.72 },
+  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25, mood: 'mellow' },
+  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i,           energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'calm' },
+  { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i,                   energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95, mood: 'electric' },
+  { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i,                    energy: 0.7,  valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
 ];
+
+function _inferMoodHint(genres, text) {
+  const genreText = genres.join(' ').toLowerCase();
+  const titleHint = _TITLE_HINTS.find((hint) => hint.match.test(text));
+  if (titleHint) return titleHint.mood;
+
+  if (/(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb|dance|club)/i.test(genreText)) {
+    return 'electric';
+  }
+  if (/(rock|metal|punk|hardcore|k-pop|j-pop|anime|latin|reggaeton|afrobeat)/i.test(genreText)) {
+    return 'bold';
+  }
+  if (/(ambient|chill|lofi|lo-fi|new age|downtempo|sleep|classical|orchestral|piano)/i.test(genreText)) {
+    return 'calm';
+  }
+  if (/(folk|acoustic|singer-songwriter|blues)/i.test(genreText)) {
+    return 'mellow';
+  }
+  if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
+    return 'cozy';
+  }
+  if (/(pop|hip hop|rap|trap|drill)/i.test(genreText)) {
+    return 'bold';
+  }
+
+  return null;
+}
 
 // Derive features from artist genres + track metadata (works without /audio-features)
 async function _deriveFeatures(token, track) {
@@ -212,6 +239,7 @@ async function _deriveFeatures(token, track) {
   const searchText = `${fullTrack.name || ''} ${fullTrack.album?.name || ''}`;
   const genreMatch = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
   const titleMatch = _TITLE_HINTS.find((p) => p.match.test(searchText));
+  const moodHint = _inferMoodHint(genres, searchText);
 
   let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
   if (titleMatch) {
@@ -250,6 +278,7 @@ async function _deriveFeatures(token, track) {
     danceability,
     _source: genreMatch ? `genre:${genres[0] || 'matched'}` : titleMatch ? 'title-hint' : 'default',
     _genres: genres,
+    _moodHint: moodHint,
     _track: fullTrack.name,
   };
 }
@@ -330,12 +359,14 @@ function _applyFeatures(features, snap = false) {
 function _detectMood(features) {
   const { energy, valence, danceability, tempo } = features;
 
-  if (energy >= 0.78 && (danceability >= 0.75 || tempo >= 128)) return 'electric';
-  if (energy >= 0.7 && valence >= 0.6) return 'bold';
-  if (energy >= 0.35 && valence >= 0.55 && tempo < 125) return 'cozy';
-  if (energy >= 0.35) return 'dreamy';
-  if (valence >= 0.4) return 'calm';
-  return 'mellow';
+  if (features._moodHint) return features._moodHint;
+  if (energy >= 0.82 && (danceability >= 0.7 || tempo >= 126)) return 'electric';
+  if (energy >= 0.68 || tempo >= 124) return 'bold';
+  if (energy <= 0.28 && valence >= 0.35) return 'calm';
+  if (valence <= 0.34 || (energy < 0.42 && valence < 0.5)) return 'mellow';
+  if (valence >= 0.62 && tempo < 120) return 'cozy';
+  if (danceability >= 0.72 && valence >= 0.5) return 'cozy';
+  return 'dreamy';
 }
 
 const _MOOD_COPY = {

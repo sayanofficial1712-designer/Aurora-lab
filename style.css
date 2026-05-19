@@ -417,15 +417,30 @@ body {
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.control-group label {
+.control-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.control-group label,
+.control-value {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: rgba(60, 60, 70, 0.85);
   letter-spacing: 0.3px;
+}
+
+.control-value {
+  min-width: 24px;
+  text-align: right;
+  color: rgba(60, 60, 70, 0.58);
+  font-variant-numeric: tabular-nums;
 }
 
 .control-group input[type="range"] {
@@ -437,6 +452,17 @@ body {
   border-radius: 2px;
   outline: none;
   cursor: pointer;
+}
+
+.control-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -2px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(60, 60, 70, 0.42);
+  font-variant-numeric: tabular-nums;
 }
 
 .control-group input[type="range"]::-webkit-slider-thumb {
