@@ -190,28 +190,70 @@ const _TITLE_HINTS = [
   { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i,                    energy: 0.7,  valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
 ];
 
-function _inferMoodHint(genres, text) {
-  const genreText = genres.join(' ').toLowerCase();
+// Hardcoded artist-name hints for artists whose Spotify genre tags are sparse/generic.
+// Key = lowercase fragment of artist name, value = mood.
+const _ARTIST_HINTS = {
+  // Electric / EDM
+  'avicii': 'electric', 'calvin harris': 'electric', 'martin garrix': 'electric',
+  'david guetta': 'electric', 'tiësto': 'electric', 'tiesto': 'electric',
+  'deadmau5': 'electric', 'zedd': 'electric', 'marshmello': 'electric',
+  'daft punk': 'electric', 'swedish house mafia': 'electric',
+  'skrillex': 'electric', 'diplo': 'electric', 'chainsmokers': 'electric',
+  'alan walker': 'electric', 'kygo': 'electric', 'illenium': 'electric',
+  // Bold
+  'the weeknd': 'bold', 'dua lipa': 'bold', 'weeknd': 'bold',
+  'taylor swift': 'bold', 'ariana grande': 'bold', 'beyoncé': 'bold',
+  'beyonce': 'bold', 'rihanna': 'bold', 'lady gaga': 'bold',
+  'billie eilish': 'bold', 'post malone': 'bold', 'drake': 'bold',
+  'kendrick lamar': 'bold', 'kanye': 'bold', 'eminem': 'bold',
+  'ed sheeran': 'bold', 'harry styles': 'bold', 'bruno mars': 'bold',
+  'imagine dragons': 'bold', 'coldplay': 'bold', 'maroon 5': 'bold',
+  'sam smith': 'bold', 'selena gomez': 'bold', 'shawn mendes': 'bold',
+  'olivia rodrigo': 'bold', 'doja cat': 'bold', 'lizzo': 'bold',
+  // Cozy
+  'john mayer': 'cozy', 'norah jones': 'cozy', 'jack johnson': 'cozy',
+  'frank sinatra': 'cozy', 'michael bublé': 'cozy', 'michael buble': 'cozy',
+  'sade': 'cozy', 'amy winehouse': 'cozy', 'alicia keys': 'cozy',
+  // Mellow
+  'adele': 'mellow', 'lana del rey': 'mellow', 'sufjan stevens': 'mellow',
+  'elliott smith': 'mellow', 'nick cave': 'mellow', 'bon iver': 'mellow',
+  'phoebe bridgers': 'mellow', 'james blake': 'mellow',
+  // Calm
+  'brian eno': 'calm', 'max richter': 'calm', 'ólafur arnalds': 'calm',
+  'olafur arnalds': 'calm', 'ludovico einaudi': 'calm', 'yiruma': 'calm',
+};
+
+function _inferMoodHint(genres, text, artistNames) {
+  // 1. Title/album keyword check first
   const titleHint = _TITLE_HINTS.find((hint) => hint.match.test(text));
   if (titleHint) return titleHint.mood;
 
-  if (/(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb|dance|club)/i.test(genreText)) {
+  // 2. Known artist names (most reliable since genre API is sparse)
+  for (const name of (artistNames || [])) {
+    const lower = name.toLowerCase();
+    for (const [key, mood] of Object.entries(_ARTIST_HINTS)) {
+      if (lower.includes(key)) return mood;
+    }
+  }
+
+  // 3. Genre text (when genres ARE populated)
+  const genreText = genres.join(' ').toLowerCase();
+  if (!genreText) return null;
+
+  if (/(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb|dance.?pop|electro|club)/i.test(genreText)) {
     return 'electric';
   }
-  if (/(rock|metal|punk|hardcore|k-pop|j-pop|anime|latin|reggaeton|afrobeat)/i.test(genreText)) {
+  if (/(rock|metal|punk|hardcore|k-pop|j-pop|anime|latin|reggaeton|afrobeat|hip.?hop|rap|trap|drill|pop)/i.test(genreText)) {
     return 'bold';
   }
-  if (/(ambient|chill|lofi|lo-fi|new age|downtempo|sleep|classical|orchestral|piano)/i.test(genreText)) {
+  if (/(ambient|chill|lofi|lo-fi|new.?age|downtempo|sleep|classical|orchestral|piano|baroque|opera)/i.test(genreText)) {
     return 'calm';
   }
-  if (/(folk|acoustic|singer-songwriter|blues)/i.test(genreText)) {
+  if (/(folk|acoustic|singer.?songwriter|blues|indie.?folk)/i.test(genreText)) {
     return 'mellow';
   }
   if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
     return 'cozy';
-  }
-  if (/(pop|hip hop|rap|trap|drill)/i.test(genreText)) {
-    return 'bold';
   }
 
   return null;
@@ -237,9 +279,10 @@ async function _deriveFeatures(token, track) {
   }
 
   const searchText = `${fullTrack.name || ''} ${fullTrack.album?.name || ''}`;
+  const artistNames = (fullTrack.artists || []).map((a) => a.name);
   const genreMatch = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
   const titleMatch = _TITLE_HINTS.find((p) => p.match.test(searchText));
-  const moodHint = _inferMoodHint(genres, searchText);
+  const moodHint = _inferMoodHint(genres, searchText, artistNames);
 
   let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
   if (titleMatch) {
@@ -298,8 +341,9 @@ async function _loadTrackAndApplyMood(token, track) {
   console.log('%c[Aurora × Spotify] ✓ Mood detected', 'color:#1DB954;font-weight:bold', {
     track: features._track,
     mood,
+    moodHint: features._moodHint || '(numeric fallback)',
     source: features._source,
-    genres: features._genres.length ? features._genres.slice(0, 3) : '(none)',
+    genres: features._genres.length ? features._genres.slice(0, 4) : '(none — artist lookup used)',
     energy: +features.energy.toFixed(2),
     valence: +features.valence.toFixed(2),
     tempo: Math.round(features.tempo),
@@ -359,13 +403,15 @@ function _applyFeatures(features, snap = false) {
 function _detectMood(features) {
   const { energy, valence, danceability, tempo } = features;
 
+  // Artist/title/genre hint wins always — most reliable signal
   if (features._moodHint) return features._moodHint;
-  if (energy >= 0.82 && (danceability >= 0.7 || tempo >= 126)) return 'electric';
-  if (energy >= 0.68 || tempo >= 124) return 'bold';
-  if (energy <= 0.28 && valence >= 0.35) return 'calm';
-  if (valence <= 0.34 || (energy < 0.42 && valence < 0.5)) return 'mellow';
-  if (valence >= 0.62 && tempo < 120) return 'cozy';
-  if (danceability >= 0.72 && valence >= 0.5) return 'cozy';
+
+  // Numeric fallback — looser thresholds so neutral defaults don't all land on dreamy
+  if (energy >= 0.75 || (energy >= 0.6 && danceability >= 0.75) || tempo >= 126) return 'electric';
+  if (energy >= 0.55 || tempo >= 110) return 'bold';
+  if (energy <= 0.3 && valence >= 0.35) return 'calm';
+  if (valence <= 0.38 || energy <= 0.3) return 'mellow';
+  if (valence >= 0.58 || danceability >= 0.65) return 'cozy';
   return 'dreamy';
 }
 
