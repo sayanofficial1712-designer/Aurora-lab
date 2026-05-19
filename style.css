@@ -747,6 +747,57 @@ body.spotify-connected .mi-search-wrap { display: flex; }
   transform: translate(-50%, -50%);
 }
 
+/* ── Gramophone tonearm ── */
+/* Pivot lives at the upper-right corner of the disc; arm extends left over the record */
+.vinyl-tonearm {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(180deg, #f0f0f4 0%, #b8b8c0 50%, #8a8a92 100%);
+  border-radius: 2px;
+  transform-origin: 100% 50%;
+  transform: rotate(46deg); /* RESTING — arm lifted up-right, away from disc */
+  transition: transform 0.95s cubic-bezier(0.55, 0.05, 0.25, 1);
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+}
+
+/* Pivot ball (right end) */
+.vinyl-tonearm::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fafafd 0%, #c8c8d0 45%, #6a6a72 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 -1px 1px rgba(0, 0, 0, 0.18);
+}
+
+/* Cartridge / needle head (left end) */
+.vinyl-tonearm::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -2px;
+  width: 8px;
+  height: 7px;
+  background: linear-gradient(180deg, #2c2c34 0%, #14141a 100%);
+  border-radius: 1px 4px 4px 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* PLAYING — arm swings down onto the outer edge of the record */
+.vinyl-disc:not(.paused) ~ .vinyl-tonearm {
+  transform: rotate(-12deg);
+}
+
 .player-track-info {
   display: flex;
   flex-direction: column;
