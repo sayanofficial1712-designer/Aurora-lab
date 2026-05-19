@@ -305,6 +305,60 @@ body {
   max-width: 180px;
 }
 
+/* ── Playback Controls ── */
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.playback-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(50, 50, 60, 0.85);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.playback-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.08);
+}
+
+.playback-btn:active {
+  transform: scale(0.95);
+}
+
+.playback-btn.play-pause {
+  width: 38px;
+  height: 38px;
+  background: #1DB954;
+  color: #fff;
+}
+
+.playback-btn.play-pause:hover {
+  background: #1ed760;
+}
+
+.playback-btn.play-pause .icon-pause {
+  display: none;
+}
+
+.playback-btn.play-pause.playing .icon-play {
+  display: none;
+}
+
+.playback-btn.play-pause.playing .icon-pause {
+  display: block;
+}
+
 .mood-detect {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 11px;

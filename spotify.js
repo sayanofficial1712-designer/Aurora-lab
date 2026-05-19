@@ -8,7 +8,7 @@ const SPOTIFY_CLIENT_ID = 'a0b0a5190eff47bd92e15db39f5d37e6';
 const SPOTIFY_REDIRECT_URI = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
   : 'https://sayanofficial1712-designer.github.io/Aurora-lab/';
-const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state';
+const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
 
 // ─────────────────────────────────────────────────────────────
 // Global state — read by aurora.js render loop
@@ -163,6 +163,69 @@ async function _fetchArtist(token, artistId) {
   });
   if (!resp.ok) throw new Error(`Artist ${resp.status}`);
   return resp.json();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Playback controls
+// ─────────────────────────────────────────────────────────────
+let _isPlaying = false;
+
+async function _playPause() {
+  try {
+    const token = await _getToken();
+    const endpoint = _isPlaying
+      ? 'https://api.spotify.com/v1/me/player/pause'
+      : 'https://api.spotify.com/v1/me/player/play';
+    const resp = await fetch(endpoint, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (resp.ok || resp.status === 204) {
+      _isPlaying = !_isPlaying;
+      _updatePlayPauseUI();
+      // Poll immediately to catch state change
+      setTimeout(_poll, 500);
+    } else {
+      console.warn('[Aurora × Spotify] playback control failed:', resp.status);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] playback error:', err.message);
+  }
+}
+
+async function _skipNext() {
+  try {
+    const token = await _getToken();
+    const resp = await fetch('https://api.spotify.com/v1/me/player/next', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (resp.ok || resp.status === 204) {
+      setTimeout(_poll, 500);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] skip error:', err.message);
+  }
+}
+
+async function _skipPrev() {
+  try {
+    const token = await _getToken();
+    const resp = await fetch('https://api.spotify.com/v1/me/player/previous', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (resp.ok || resp.status === 204) {
+      setTimeout(_poll, 500);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] skip error:', err.message);
+  }
+}
+
+function _updatePlayPauseUI() {
+  const btn = document.getElementById('playPauseBtn');
+  if (btn) btn.classList.toggle('playing', _isPlaying);
 }
 
 // Genre → audio-feature heuristics. Widened spread so different songs feel dramatically different.
@@ -453,6 +516,10 @@ function _setTrackDisplay(track, isPlaying = true) {
   }
 
   if (discEl) discEl.classList.toggle('paused', !isPlaying);
+  
+  // Sync playback state for controls
+  _isPlaying = isPlaying;
+  _updatePlayPauseUI();
 }
 
 function _announceMood(mood, track) {
@@ -534,3 +601,8 @@ function _disconnect() {
 
 document.getElementById('spotifyConnectBtn').addEventListener('click', _initiateAuth);
 document.getElementById('spotifyDisconnectBtn').addEventListener('click', _disconnect);
+
+// Playback controls
+document.getElementById('playPauseBtn').addEventListener('click', _playPause);
+document.getElementById('nextBtn').addEventListener('click', _skipNext);
+document.getElementById('prevBtn').addEventListener('click', _skipPrev);
