@@ -58,6 +58,18 @@
           </div>
         </div>
         <p class="mood-detect" id="moodDetect"></p>
+        <p class="playback-msg" id="playbackMsg"></p>
+
+        <div class="search-section">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            </svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search a song to play…" autocomplete="off" spellcheck="false">
+          </div>
+          <ul class="search-results" id="searchResults"></ul>
+        </div>
+
         <button type="button" class="spotify-disconnect-btn" id="spotifyDisconnectBtn">Disconnect</button>
       </div>
     </div>
