@@ -8,7 +8,7 @@ const SPOTIFY_CLIENT_ID = 'a0b0a5190eff47bd92e15db39f5d37e6';
 const SPOTIFY_REDIRECT_URI = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
   : 'https://sayanofficial1712-designer.github.io/Aurora-lab/';
-const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state user-read-private';
+const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state user-read-private user-read-recently-played';
 
 // ─────────────────────────────────────────────────────────────
 // Global state — read by aurora.js render loop
@@ -169,11 +169,12 @@ async function _fetchArtist(token, artistId) {
 // Playback controls
 // ─────────────────────────────────────────────────────────────
 let _isPlaying = false;
-let _isPremium = true; // optimistic; set false on first 403
+let _isPremium = true; // updated from control responses
+let _premiumRestrictionDetected = false;
 
 function _showControlFeedback(msg, isError = false) {
   const el = document.getElementById('playbackMsg');
-  if (!el) return;
+  if (!el || !window.spotifyState?.connected) return;
   el.textContent = msg;
   el.style.color = isError ? 'rgba(200,60,60,0.85)' : 'rgba(29,185,84,0.9)';
   clearTimeout(el._t);
@@ -187,6 +188,7 @@ async function _controlFetch(method, endpoint, body) {
   const resp = await fetch(endpoint, opts);
   if (resp.status === 403) {
     _isPremium = false;
+    _premiumRestrictionDetected = true;
     _showControlFeedback('Playback control requires Spotify Premium', true);
     return null;
   }
@@ -198,11 +200,15 @@ async function _controlFetch(method, endpoint, body) {
     _showControlFeedback('Re-connect Spotify to enable controls', true);
     return null;
   }
+  if (resp.ok || resp.status === 204) {
+    _isPremium = true;
+    _premiumRestrictionDetected = false;
+    _showControlFeedback('Playback synced');
+  }
   return resp;
 }
 
 async function _playPause() {
-  if (!_isPremium) { _showControlFeedback('Playback control requires Spotify Premium', true); return; }
   const endpoint = _isPlaying
     ? 'https://api.spotify.com/v1/me/player/pause'
     : 'https://api.spotify.com/v1/me/player/play';
@@ -215,7 +221,6 @@ async function _playPause() {
 }
 
 async function _skipNext() {
-  if (!_isPremium) { _showControlFeedback('Playback control requires Spotify Premium', true); return; }
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/next');
   if (resp) {
     _lastTrackId = null; // force mood re-detect on next poll
@@ -224,7 +229,6 @@ async function _skipNext() {
 }
 
 async function _skipPrev() {
-  if (!_isPremium) { _showControlFeedback('Playback control requires Spotify Premium', true); return; }
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/previous');
   if (resp) {
     _lastTrackId = null;
@@ -233,10 +237,9 @@ async function _skipPrev() {
 }
 
 async function _playTrackUri(uri, trackName) {
-  if (!_isPremium) { _showControlFeedback('Playback control requires Spotify Premium', true); return; }
   const resp = await _controlFetch('PUT', 'https://api.spotify.com/v1/me/player/play', { uris: [uri] });
   if (resp) {
-    _showControlFeedback(`Playing ${trackName}`);
+    _showControlFeedback(`Controlling your Spotify session`);
     _lastTrackId = null;
     _hideSearchResults();
     document.getElementById('searchInput').value = '';
@@ -247,6 +250,79 @@ async function _playTrackUri(uri, trackName) {
 function _updatePlayPauseUI() {
   const btn = document.getElementById('playPauseBtn');
   if (btn) btn.classList.toggle('playing', _isPlaying);
+}
+
+// ─── Progress bar ───
+let _progressMs = 0;
+let _durationMs = 0;
+let _progressLastTick = Date.now();
+
+function _formatTime(ms) {
+  if (!ms || ms < 0) return '0:00';
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function _syncProgressFromSpotify(progressMs, durationMs) {
+  _progressMs = progressMs;
+  _durationMs = durationMs;
+  _progressLastTick = Date.now();
+  _updateProgressUI();
+}
+
+function _updateProgress(progressMs, durationMs) {
+  _progressMs = progressMs;
+  _durationMs = durationMs;
+  _updateProgressUI();
+}
+
+function _updateProgressUI() {
+  const fill = document.getElementById('progressFill');
+  const cur = document.getElementById('progressTime');
+  const dur = document.getElementById('durationTime');
+  if (!fill) return;
+  const pct = _durationMs > 0 ? (_progressMs / _durationMs) * 100 : 0;
+  fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  if (cur) cur.textContent = _formatTime(_progressMs);
+  if (dur) dur.textContent = _formatTime(_durationMs);
+}
+
+// Tick progress locally between polls so the bar moves smoothly
+function _tickProgress() {
+  if (!_isPlaying || !_durationMs) return;
+  const now = Date.now();
+  _progressMs = Math.min(_durationMs, _progressMs + (now - _progressLastTick));
+  _progressLastTick = now;
+  _updateProgressUI();
+}
+setInterval(_tickProgress, 500);
+
+async function _seekTo(positionMs) {
+  if (!_durationMs) return;
+  const clamped = Math.max(0, Math.min(_durationMs, positionMs));
+  const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/seek?position_ms=${Math.floor(clamped)}`);
+  if (resp) {
+    _progressMs = clamped;
+    _progressLastTick = Date.now();
+    _updateProgressUI();
+  }
+}
+
+// ─── Volume control ───
+let _volumeSyncedFromSpotify = false;
+let _volumeTimer = null;
+
+function _syncVolumeFromSpotify(percent) {
+  const slider = document.getElementById('volumeSlider');
+  if (!slider || _volumeSyncedFromSpotify) return; // sync once on connect
+  slider.value = percent;
+  _volumeSyncedFromSpotify = true;
+}
+
+async function _setVolume(percent) {
+  await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/volume?volume_percent=${Math.round(percent)}`);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -489,7 +565,9 @@ async function _loadTrackAndApplyMood(token, track) {
     danceability: +features.danceability.toFixed(2),
   });
 
-  if (typeof window.transitionToMood === 'function') {
+  // Respect Mood Lock: when AUTO is off, freeze the current mood
+  const autoOn = window._auroraAutoMode !== false;
+  if (autoOn && typeof window.transitionToMood === 'function') {
     window.transitionToMood(mood, 1800);
   }
 
@@ -506,7 +584,7 @@ async function _poll() {
       return;
     }
 
-    _setTrackDisplay(data.item, data.is_playing !== false);
+    _setTrackDisplay(data.item, data.is_playing !== false, data);
 
     if (data.item.id !== _lastTrackId) {
       _lastTrackId = data.item.id;
@@ -563,26 +641,34 @@ const _MOOD_COPY = {
   mellow: 'carries a mellow weight',
 };
 
-function _setTrackDisplay(track, isPlaying = true) {
+function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   const trackEl = document.getElementById('spotifyTrack');
   const artistEl = document.getElementById('spotifyArtist');
   const artEl = document.getElementById('vinylArt');
   const discEl = document.getElementById('vinylDisc');
   const moodDetectEl = document.getElementById('moodDetect');
+  // Center-stage Now Playing
+  const npTrackEl = document.getElementById('npTrack');
+  const npArtistEl = document.getElementById('npArtist');
 
   if (!trackEl) return;
 
   if (!track) {
-    trackEl.textContent = 'Waiting for music…';
-    if (artistEl) artistEl.textContent = 'Open Spotify and press play';
+    trackEl.textContent = 'Nothing playing';
+    if (artistEl) artistEl.textContent = 'Connect Spotify to begin';
+    if (npTrackEl) npTrackEl.textContent = 'A quiet aurora is waiting';
+    if (npArtistEl) npArtistEl.textContent = 'Connect Spotify or pick a mood';
     if (artEl) { artEl.removeAttribute('src'); artEl.classList.remove('loaded'); }
     if (discEl) discEl.classList.add('paused');
     if (moodDetectEl) moodDetectEl.textContent = '';
+    _updateProgress(0, 0);
     return;
   }
 
   trackEl.textContent = track.name;
   if (artistEl) artistEl.textContent = track.artists.map((a) => a.name).join(', ');
+  if (npTrackEl) npTrackEl.textContent = track.name;
+  if (npArtistEl) npArtistEl.textContent = track.artists.map((a) => a.name).join(', ');
 
   const artUrl = track.album?.images?.[0]?.url;
   if (artEl && artUrl && artEl.src !== artUrl) {
@@ -592,23 +678,30 @@ function _setTrackDisplay(track, isPlaying = true) {
   }
 
   if (discEl) discEl.classList.toggle('paused', !isPlaying);
-  
-  // Sync playback state for controls
+
   _isPlaying = isPlaying;
   _updatePlayPauseUI();
+
+  if (playbackData) {
+    _syncProgressFromSpotify(playbackData.progress_ms || 0, track.duration_ms || 0, isPlaying);
+    if (typeof playbackData.device?.volume_percent === 'number') {
+      _syncVolumeFromSpotify(playbackData.device.volume_percent);
+    }
+  }
 }
 
 function _announceMood(mood, track) {
-  const el = document.getElementById('moodDetect');
-  if (!el || !mood) return;
-  el.innerHTML = `This song ${_MOOD_COPY[mood] || 'feels unique'} <strong>${mood}</strong>`;
+  const detectEl = document.getElementById('moodDetect');
+  const npMoodEl = document.getElementById('npMood');
+  if (!mood) return;
+
+  const msg = `This song ${_MOOD_COPY[mood] || 'feels unique'} — <strong>${mood}</strong>`;
+  if (detectEl) detectEl.innerHTML = msg;
+  if (npMoodEl) npMoodEl.innerHTML = msg;
 }
 
 function _setConnectedUI(connected) {
-  const btn = document.getElementById('spotifyConnectBtn');
-  const view = document.getElementById('spotifyConnected');
-  if (btn) btn.style.display = connected ? 'none' : 'flex';
-  if (view) view.style.display = connected ? 'flex' : 'none';
+  document.body.classList.toggle('spotify-connected', connected);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -617,7 +710,11 @@ function _setConnectedUI(connected) {
 async function _connect(token) {
   window.spotifyState.connected = true;
   _lastTrackId = null;
+  _isPremium = true;
+  _premiumRestrictionDetected = false;
+  _volumeSyncedFromSpotify = false;
   _setConnectedUI(true);
+  _showControlFeedback('Controlling your Spotify session');
   console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
   await _poll();
   _pollInterval = setInterval(_poll, 4000);
@@ -628,11 +725,15 @@ function _disconnect() {
   clearInterval(_pollInterval);
   _pollInterval = null;
   _lastTrackId = null;
+  _isPremium = true;
+  _premiumRestrictionDetected = false;
   localStorage.removeItem('aurora_spotify_token');
   localStorage.removeItem('aurora_spotify_refresh');
   localStorage.removeItem('aurora_spotify_expiry');
   _setConnectedUI(false);
   _setTrackDisplay(null);
+  const feedback = document.getElementById('playbackMsg');
+  if (feedback) feedback.textContent = '';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -698,6 +799,63 @@ _searchInput.addEventListener('keydown', (e) => {
 
 // Close results when clicking outside
 document.addEventListener('click', (e) => {
-  const section = document.querySelector('.search-section');
+  const section = document.querySelector('.search-bar');
   if (section && !section.contains(e.target)) _hideSearchResults();
+});
+
+// ─── Volume slider ───
+const _volumeSlider = document.getElementById('volumeSlider');
+if (_volumeSlider) {
+  _volumeSlider.addEventListener('input', (e) => {
+    clearTimeout(_volumeTimer);
+    const v = Number(e.target.value);
+    _volumeTimer = setTimeout(() => _setVolume(v), 250);
+  });
+}
+
+// ─── Progress bar seek ───
+const _progressTrack = document.getElementById('progressTrack');
+if (_progressTrack) {
+  _progressTrack.addEventListener('click', (e) => {
+    if (!_durationMs) return;
+    const rect = _progressTrack.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    _seekTo(pct * _durationMs);
+  });
+}
+
+// ─── Mood Lock toggle (also drives AUTO toggle in Mood Lab) ───
+const _moodLockBtn = document.getElementById('moodLockBtn');
+const _autoToggleInput = document.getElementById('autoToggle');
+function _setAutoMode(on) {
+  window._auroraAutoMode = on;
+  if (_autoToggleInput) _autoToggleInput.checked = on;
+  if (_moodLockBtn) _moodLockBtn.classList.toggle('locked', !on);
+}
+if (_moodLockBtn) {
+  _moodLockBtn.addEventListener('click', () => {
+    _setAutoMode(!_autoToggleInput?.checked);
+  });
+}
+if (_autoToggleInput) {
+  _autoToggleInput.addEventListener('change', (e) => {
+    _setAutoMode(e.target.checked);
+  });
+}
+_setAutoMode(true);
+
+// ─── Expand / Focus mode ───
+const _expandBtn = document.getElementById('expandBtn');
+if (_expandBtn) {
+  _expandBtn.addEventListener('click', () => {
+    document.body.classList.toggle('focus-mode');
+  });
+}
+
+// ─── Left-sidebar nav: Search item focuses the center search input ───
+document.querySelectorAll('.nav-item').forEach((item) => {
+  item.addEventListener('click', () => {
+    const nav = item.dataset.nav;
+    if (nav === 'search') _searchInput.focus();
+  });
 });

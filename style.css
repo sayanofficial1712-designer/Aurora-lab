@@ -1,452 +1,358 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ─────────────────────────────────────────────────────────
+   AURORA LAB — Spotify-inspired glass layout
+   Adaptive glass: CSS variables driven from aurora.js
+   ───────────────────────────────────────────────────────── */
+
+:root {
+  /* Adaptive glass (JS updates these based on aurora luminance) */
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-bg-strong: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-blur: 28px;
+
+  /* Text */
+  --text-primary: rgba(30, 30, 40, 0.92);
+  --text-secondary: rgba(40, 45, 55, 0.66);
+  --text-tertiary: rgba(40, 45, 55, 0.48);
+  --text-active: rgba(15, 15, 25, 0.98);
+
+  /* Dock keeps its own dark identity (always Spotify-like) */
+  --dock-bg: rgba(18, 18, 26, 0.62);
+  --dock-border: rgba(255, 255, 255, 0.08);
+  --dock-text: rgba(255, 255, 255, 0.94);
+  --dock-text-secondary: rgba(255, 255, 255, 0.62);
+
+  --accent: #1DB954;
+  --accent-hover: #1ed760;
+
+  /* Layout */
+  --sidebar-w-left: 300px;
+  --sidebar-w-right: 340px;
+  --dock-h: 96px;
+  --gap: 16px;
+  --radius: 20px;
+
+  --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.10);
+  --shadow-dock: 0 -8px 32px rgba(0, 0, 0, 0.18);
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-body {
+/* Darker glass when aurora is bright (white text on top) */
+body.aurora-bright {
+  --glass-bg: rgba(20, 20, 30, 0.30);
+  --glass-bg-strong: rgba(20, 20, 30, 0.42);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --text-primary: rgba(255, 255, 255, 0.94);
+  --text-secondary: rgba(255, 255, 255, 0.68);
+  --text-tertiary: rgba(255, 255, 255, 0.45);
+  --text-active: rgba(255, 255, 255, 0.98);
+}
+
+/* ── Reset ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
   overflow: hidden;
-  background: #F5F5F3;
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: #0a0a10;
+  transition: color 0.6s ease;
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+/* ── Aurora canvas (fullscreen background) ── */
+#aurora {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── App grid ── */
+.app-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--sidebar-w-left) 1fr var(--sidebar-w-right);
+  grid-template-rows: 1fr var(--dock-h);
+  gap: var(--gap);
+  padding: var(--gap);
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Allow mouse interactions to reach the aurora canvas in empty areas */
+.main-stage {
+  pointer-events: none;
+}
+.main-stage > * {
+  pointer-events: auto;
+}
+
+/* ── Glass panel base ── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-glass);
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+
+/* ─────────────────────────────────────────────────────────
+   LEFT SIDEBAR
+   ───────────────────────────────────────────────────────── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 20px;
+  overflow-y: auto;
+}
+
+.sidebar-left { grid-column: 1; grid-row: 1; }
+
+.brand {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-}
-
-.container {
-  width: calc(100vw - 96px);
-  height: calc(100vh - 96px);
-  border-radius: 40px;
-  overflow: hidden;
-  margin: 48px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-}
-
-#aurora {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.controls {
-  position: fixed;
-  top: 72px;
-  right: 72px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-radius: 24px;
-  padding: 28px 36px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  min-width: 280px;
-}
-
-.control-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.section-label {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.85);
-  letter-spacing: 0.3px;
-}
-
-.mood-card {
-  position: fixed;
-  bottom: 72px;
-  left: 72px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-radius: 24px;
-  padding: 24px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  max-width: 320px;
-}
-
-.mood-prompt {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  color: rgba(60, 60, 70, 0.9);
-  margin-bottom: 14px;
-}
-
-.mood-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.mood-chip {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.85);
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 20px;
-  padding: 8px 14px;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.mood-chip:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
-.mood-chip.active {
-  background: rgba(255, 255, 255, 0.45);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.mood-result {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  color: rgba(60, 60, 70, 0.65);
-  margin-top: 14px;
-  line-height: 1.4;
-  min-height: 1.2em;
-}
-
-/* ── Spotify section ── */
-.spotify-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 4px 0;
-}
-
-.spotify-section {
-  display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
-.spotify-label {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(60, 60, 70, 0.9);
+.brand-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, #f5a8d1, #c4b8f5 45%, #a8e8de 85%);
+  box-shadow: 0 0 14px rgba(255, 200, 230, 0.4);
 }
 
-.spotify-sub {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
-  color: rgba(60, 60, 70, 0.55);
-  line-height: 1.4;
-  margin-top: -4px;
+.brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text-active);
 }
 
-.spotify-connect-btn {
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
   display: flex;
   align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: var(--glass-bg-strong);
+  color: var(--text-active);
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.section-heading {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-tertiary);
+}
+
+/* Mood chips */
+.mood-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mood-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.mood-chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--text-active);
+  transform: translateY(-1px);
+}
+
+body.aurora-bright .mood-chip:hover { background: rgba(255, 255, 255, 0.18); }
+
+.mood-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.mood-result {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  min-height: 1.2em;
+}
+
+/* Spotify connect block */
+.spotify-block { gap: 10px; }
+
+.spotify-connect-btn {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: #1DB954;
+  background: var(--accent);
   border: none;
-  border-radius: 20px;
-  padding: 10px 16px;
+  border-radius: 999px;
+  padding: 9px 16px;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.1s ease;
   align-self: flex-start;
 }
 
-.spotify-connect-btn:hover {
-  background: #1ed760;
-  transform: translateY(-1px);
-}
+.spotify-connect-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
 .spotify-connected {
   display: none;
   flex-direction: column;
-  gap: 12px;
-}
-
-/* ── Vinyl Now Playing ── */
-.vinyl-now-playing {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.vinyl-stage {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  flex-shrink: 0;
-}
-
-.vinyl-aura {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(29, 185, 84, 0.32), transparent 70%);
-  filter: blur(6px);
-  animation: vinylPulse 3.4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes vinylPulse {
-  0%, 100% { opacity: 0.45; transform: scale(1); }
-  50%      { opacity: 0.85; transform: scale(1.18); }
-}
-
-.vinyl-disc {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: #0d0d10;
-  overflow: hidden;
-  animation: vinylSpin 9s linear infinite;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.vinyl-disc.paused {
-  animation-play-state: paused;
-}
-
-@keyframes vinylSpin {
-  to { transform: rotate(360deg); }
-}
-
-.vinyl-art {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.vinyl-art.loaded {
-  opacity: 1;
-}
-
-.vinyl-grooves {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    repeating-radial-gradient(
-      circle at center,
-      rgba(255, 255, 255, 0.08) 0px,
-      rgba(255, 255, 255, 0.08) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-  mix-blend-mode: overlay;
-  pointer-events: none;
-}
-
-.vinyl-label-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 30%, rgba(255, 255, 255, 0.6) 32%, rgba(0, 0, 0, 0.55) 70%);
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
-}
-
-.vinyl-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.vinyl-now-label {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 9px;
-  font-weight: 600;
-  color: #1DB954;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
-
-.vinyl-track {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(40, 40, 55, 0.92);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-}
-
-.vinyl-artist {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
-  color: rgba(60, 60, 70, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-}
-
-/* ── Playback Controls ── */
-.playback-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.playback-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  color: rgba(50, 50, 60, 0.85);
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.playback-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: scale(1.08);
-}
-
-.playback-btn:active {
-  transform: scale(0.95);
-}
-
-.playback-btn.play-pause {
-  width: 38px;
-  height: 38px;
-  background: #1DB954;
-  color: #fff;
-}
-
-.playback-btn.play-pause:hover {
-  background: #1ed760;
-}
-
-.playback-btn.play-pause .icon-pause {
-  display: none;
-}
-
-.playback-btn.play-pause.playing .icon-play {
-  display: none;
-}
-
-.playback-btn.play-pause.playing .icon-pause {
-  display: block;
+  gap: 10px;
 }
 
 .mood-detect {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
-  color: rgba(60, 60, 70, 0.7);
+  font-size: 12px;
+  color: var(--text-secondary);
   font-style: italic;
+  line-height: 1.45;
   min-height: 1em;
 }
 
 .mood-detect strong {
-  color: #1DB954;
+  color: var(--accent);
   font-style: normal;
   font-weight: 600;
 }
 
 .playback-msg {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 11px;
   min-height: 1em;
 }
 
-/* ── Search ── */
-.search-section {
-  position: relative;
+.spotify-disconnect-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  align-self: flex-start;
 }
 
-.search-input-wrap {
+.spotify-disconnect-btn:hover { color: var(--text-active); }
+
+/* ─────────────────────────────────────────────────────────
+   CENTER STAGE
+   ───────────────────────────────────────────────────────── */
+.main-stage {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Search bar */
+.search-bar {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 10px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  align-self: center;
+  width: min(560px, 100%);
 }
 
-.search-icon {
-  flex-shrink: 0;
-  color: rgba(60, 60, 70, 0.5);
-}
+.search-icon { color: var(--text-tertiary); flex-shrink: 0; }
 
 .search-input {
   flex: 1;
   background: transparent;
   border: none;
   outline: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  color: rgba(40, 40, 55, 0.92);
+  font-size: 13px;
+  color: var(--text-active);
 }
 
-.search-input::placeholder {
-  color: rgba(60, 60, 70, 0.45);
-}
+.search-input::placeholder { color: var(--text-tertiary); }
 
 .search-results {
   display: none;
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: rgba(250, 250, 252, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 12px;
+  background: rgba(20, 20, 30, 0.85);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
   overflow: hidden;
   list-style: none;
-  z-index: 100;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 .search-result-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: background 0.12s ease;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
 }
 
-.search-result-item:last-child {
-  border-bottom: none;
-}
-
-.search-result-item:hover {
-  background: rgba(29, 185, 84, 0.08);
-}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: rgba(29, 185, 84, 0.15); }
 
 .search-result-info {
   display: flex;
@@ -457,73 +363,165 @@ body {
 }
 
 .search-result-track {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(30, 30, 40, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .search-result-artist {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 10px;
-  color: rgba(60, 60, 70, 0.6);
+  color: rgba(255, 255, 255, 0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .search-play-btn {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  background: #1DB954;
+  background: var(--accent);
   border: none;
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
-  transition: background 0.12s ease, transform 0.1s ease;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, background 0.12s ease;
 }
 
-.search-play-btn:hover {
-  background: #1ed760;
-  transform: scale(1.1);
-}
+.search-play-btn:hover { background: var(--accent-hover); transform: scale(1.1); }
 
 .search-empty {
-  padding: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 14px;
   font-size: 12px;
-  color: rgba(60, 60, 70, 0.55);
+  color: rgba(255, 255, 255, 0.55);
   text-align: center;
 }
 
-.spotify-disconnect-btn {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.5);
-  background: transparent;
-  border: none;
-  padding: 0;
+/* Now playing context */
+.now-playing-context {
+  align-self: center;
+  text-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.np-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.np-track {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-active);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.np-artist {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.np-mood {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  min-height: 1em;
+}
+
+.np-mood strong { color: var(--accent); font-style: normal; font-weight: 600; }
+
+/* ─────────────────────────────────────────────────────────
+   RIGHT MOOD LAB
+   ───────────────────────────────────────────────────────── */
+.sidebar-right {
+  grid-column: 3;
+  grid-row: 1;
+  gap: 20px;
+}
+
+.moodlab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.moodlab-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-active);
+}
+
+.auto-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  text-align: left;
-  transition: color 0.15s ease;
-  align-self: flex-start;
+  user-select: none;
 }
 
-.spotify-disconnect-btn:hover {
-  color: rgba(60, 60, 70, 0.85);
+.auto-toggle input { display: none; }
+
+.auto-toggle-track {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  transition: background 0.2s ease;
 }
 
+.auto-toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.auto-toggle input:checked + .auto-toggle-track { background: var(--accent); border-color: transparent; }
+.auto-toggle input:checked + .auto-toggle-track .auto-toggle-thumb { transform: translateX(14px); background: #fff; }
+
+.auto-toggle-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.moodlab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+/* Color pickers */
 .color-pickers {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: space-between;
 }
 
@@ -532,98 +530,44 @@ body {
   appearance: none;
   width: 36px;
   height: 36px;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
   cursor: pointer;
   padding: 0;
   background: transparent;
   overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.1s ease;
 }
 
-.color-pickers input[type="color"]::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
+.color-pickers input[type="color"]:hover { transform: scale(1.08); border-color: rgba(255, 255, 255, 0.7); }
 
-.color-pickers input[type="color"]::-webkit-color-swatch {
-  border: none;
-  border-radius: 50%;
-}
+.color-pickers input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-pickers input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+.color-pickers input[type="color"]::-moz-color-swatch { border: none; border-radius: 50%; }
 
-.color-pickers input[type="color"]::-moz-color-swatch {
-  border: none;
-  border-radius: 50%;
-}
-
-.palette-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.text-btn {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.7);
-  background: transparent;
-  border: none;
-  padding: 4px 0;
-  cursor: pointer;
-  text-align: left;
-  transition: color 0.15s ease;
-}
-
-.text-btn:hover {
-  color: rgba(60, 60, 70, 0.95);
-}
-
-.share-btn {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.85);
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.share-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.share-btn.copied {
-  color: rgba(40, 120, 80, 0.9);
-}
-
+/* Motion sliders */
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .control-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
 
-.control-group label,
-.control-value {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px;
+.control-group label {
+  font-size: 12px;
   font-weight: 500;
-  color: rgba(60, 60, 70, 0.85);
-  letter-spacing: 0.3px;
+  color: var(--text-secondary);
 }
 
 .control-value {
-  min-width: 24px;
-  text-align: right;
-  color: rgba(60, 60, 70, 0.58);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-active);
   font-variant-numeric: tabular-nums;
 }
 
@@ -631,22 +575,11 @@ body {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
+  height: 4px;
+  background: var(--glass-bg-strong);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-}
-
-.control-scale {
-  display: flex;
-  justify-content: space-between;
-  margin-top: -2px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(60, 60, 70, 0.42);
-  font-variant-numeric: tabular-nums;
 }
 
 .control-group input[type="range"]::-webkit-slider-thumb {
@@ -654,25 +587,351 @@ body {
   appearance: none;
   width: 14px;
   height: 14px;
-  background: rgba(255, 255, 255, 0.95);
+  background: #fff;
   border-radius: 50%;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
-.control-group input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
-}
+.control-group input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 
 .control-group input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  background: rgba(255, 255, 255, 0.95);
+  background: #fff;
   border-radius: 50%;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   cursor: pointer;
+}
+
+.control-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mood Lab actions */
+.moodlab-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: left;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.text-btn:hover { color: var(--text-active); }
+
+.share-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-active);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.share-btn:hover { background: rgba(255, 255, 255, 0.3); }
+body.aurora-bright .share-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.share-btn.copied { color: var(--accent); }
+
+/* ─────────────────────────────────────────────────────────
+   BOTTOM PLAYER DOCK (always dark — Spotify identity)
+   ───────────────────────────────────────────────────────── */
+.player-dock {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  background: var(--dock-bg);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--dock-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-dock);
+  color: var(--dock-text);
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(360px, 2fr) minmax(220px, 1fr);
+  align-items: center;
+  padding: 12px 20px;
+  gap: 20px;
+}
+
+.player-zone { display: flex; align-items: center; }
+
+.player-left { gap: 14px; min-width: 0; }
+.player-center { flex-direction: column; gap: 8px; }
+.player-right { justify-content: flex-end; gap: 12px; }
+
+/* Vinyl in dock */
+.player-left .vinyl-stage {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.vinyl-aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.32), transparent 70%);
+  filter: blur(6px);
+  animation: vinylPulse 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes vinylPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.15); }
+}
+
+.vinyl-disc {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #0d0d10;
+  overflow: hidden;
+  animation: vinylSpin 10s linear infinite;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.vinyl-disc.paused { animation-play-state: paused; }
+
+@keyframes vinylSpin { to { transform: rotate(360deg); } }
+
+.vinyl-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.vinyl-art.loaded { opacity: 1; }
+
+.vinyl-grooves {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle at center,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px,
+    transparent 3px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.vinyl-label-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 30%, rgba(255, 255, 255, 0.6) 32%, rgba(0, 0, 0, 0.55) 70%);
+  transform: translate(-50%, -50%);
+}
+
+.player-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-track {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dock-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-artist {
+  font-size: 11px;
+  color: var(--dock-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Playback controls */
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dock-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.player-btn:hover { color: var(--dock-text); transform: scale(1.1); }
+
+.player-btn.play-pause {
+  width: 38px;
+  height: 38px;
+  background: #fff;
+  color: #0d0d10;
+}
+
+.player-btn.play-pause:hover { background: #fff; transform: scale(1.06); color: #0d0d10; }
+.player-btn.play-pause .icon-pause { display: none; }
+.player-btn.play-pause.playing .icon-play { display: none; }
+.player-btn.play-pause.playing .icon-pause { display: block; }
+
+/* Progress bar */
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.time-label {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dock-text-secondary);
+  min-width: 32px;
+  text-align: center;
+}
+
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.25s linear;
+}
+
+.progress-track:hover .progress-fill { background: var(--accent); }
+
+/* Right zone */
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dock-text-secondary);
+}
+
+.volume-control input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-control input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.player-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dock-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.player-icon-btn:hover { color: var(--dock-text); background: rgba(255, 255, 255, 0.08); }
+
+.player-icon-btn .icon-locked { display: none; }
+.player-icon-btn.locked { color: var(--accent); }
+.player-icon-btn.locked .icon-unlocked { display: none; }
+.player-icon-btn.locked .icon-locked { display: block; }
+
+/* Focus / Expand mode hides side panels */
+body.focus-mode .sidebar { opacity: 0; pointer-events: none; transform: translateY(-8px); }
+body.focus-mode .main-stage { opacity: 1; }
+.sidebar { transition: opacity 0.35s ease, transform 0.35s ease; }
+
+/* Connected state shows extra info in left sidebar */
+body.spotify-connected .spotify-connect-btn { display: none; }
+body.spotify-connected .spotify-connected { display: flex; }
+
+/* Scrollbar */
+.sidebar::-webkit-scrollbar, .search-results::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb, .search-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+/* Smaller screens — collapse to single column with stacked panels */
+@media (max-width: 1100px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto var(--dock-h);
+  }
+  .sidebar-left, .sidebar-right { grid-column: 1; }
+  .sidebar-left { grid-row: 1; }
+  .main-stage { grid-row: 2; }
+  .sidebar-right { grid-row: 3; }
+  .player-dock { grid-row: 4; }
 }
