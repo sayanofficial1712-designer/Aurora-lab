@@ -250,8 +250,10 @@ async function _playTrackUri(uri, trackName) {
 function _updatePlayPauseUI() {
   const btn = document.getElementById('playPauseBtn');
   if (btn) btn.classList.toggle('playing', _isPlaying);
-  const mini = document.getElementById('miMiniPlayBtn');
-  if (mini) mini.classList.toggle('playing', _isPlaying);
+  const hero = document.getElementById('playerHero');
+  if (hero) hero.classList.toggle('is-playing', _isPlaying);
+  const wrap = document.querySelector('.player-cover-wrap');
+  if (wrap) wrap.classList.toggle('is-playing', _isPlaying);
 }
 
 // ─── Progress bar ───
@@ -554,10 +556,18 @@ async function _loadTrackAndApplyMood(token, track) {
   _applyFeatures(features, true);
 
   const mood = _detectMood(features);
+  const libMood = typeof window.toLibraryMood === 'function' ? window.toLibraryMood(mood) : mood;
+  const confidence = _computeConfidence(features, libMood);
+
+  if (typeof window.setMoodConfidence === 'function') {
+    window.setMoodConfidence(confidence);
+  }
 
   console.log('%c[Aurora × Spotify] ✓ Mood detected', 'color:#1DB954;font-weight:bold', {
     track: features._track,
     mood,
+    libraryMood: libMood,
+    confidence: `${confidence}%`,
     moodHint: features._moodHint || '(numeric fallback)',
     source: features._source,
     genres: features._genres.length ? features._genres.slice(0, 4) : '(none — artist lookup used)',
@@ -567,13 +577,12 @@ async function _loadTrackAndApplyMood(token, track) {
     danceability: +features.danceability.toFixed(2),
   });
 
-  // Respect Mood Lock: when AUTO is off, freeze the current mood
   const autoOn = window._auroraAutoMode !== false;
   if (autoOn && typeof window.transitionToMood === 'function') {
-    window.transitionToMood(mood, 1800);
+    window.transitionToMood(libMood, 1800);
   }
 
-  _announceMood(mood, track);
+  _announceMood(libMood, track, confidence);
 }
 
 async function _poll() {
@@ -618,7 +627,32 @@ function _applyFeatures(features, snap = false) {
 // ─────────────────────────────────────────────────────────────
 // UI helpers
 // ─────────────────────────────────────────────────────────────
-// Mood detection from derived features → maps to one of the 6 mood chips
+function _computeConfidence(features, mood) {
+  const { energy, valence, danceability, tempo } = features;
+  let score = 55;
+
+  if (features._moodHint === mood || features._moodHint === 'mellow' && mood === 'calm') {
+    score = 88;
+  } else {
+    const profiles = {
+      electric: { energy: 0.85, valence: 0.7, danceability: 0.85, tempo: 128 },
+      bold: { energy: 0.65, valence: 0.55, danceability: 0.6, tempo: 115 },
+      cozy: { energy: 0.45, valence: 0.72, danceability: 0.65, tempo: 100 },
+      calm: { energy: 0.25, valence: 0.5, danceability: 0.35, tempo: 75 },
+      dreamy: { energy: 0.45, valence: 0.55, danceability: 0.5, tempo: 95 },
+    };
+    const p = profiles[mood] || profiles.dreamy;
+    const dist =
+      Math.abs(energy - p.energy) +
+      Math.abs(valence - p.valence) +
+      Math.abs(danceability - p.danceability) +
+      Math.min(1, Math.abs(tempo - p.tempo) / 80);
+    score = Math.round(78 - dist * 35);
+  }
+
+  return Math.max(42, Math.min(96, score));
+}
+
 function _detectMood(features) {
   const { energy, valence, danceability, tempo } = features;
 
@@ -644,34 +678,29 @@ const _MOOD_COPY = {
 };
 
 function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
-  // Bottom dock
   const trackEl = document.getElementById('spotifyTrack');
   const artistEl = document.getElementById('spotifyArtist');
-  const artEl = document.getElementById('vinylArt');
-  const discEl = document.getElementById('vinylDisc');
-  // Right-panel Now Playing card
-  const miTrackName = document.getElementById('miTrackName');
-  const miTrackArtist = document.getElementById('miTrackArtist');
-  const miAlbumArt = document.getElementById('miAlbumArt');
-  // Center stage
+  const coverEl = document.getElementById('playerCover');
   const npTrackEl = document.getElementById('npTrack');
   const npArtistEl = document.getElementById('npArtist');
-  // Status
-  const moodDetectEl = document.getElementById('moodDetect');
+  const hintEl = document.getElementById('moodLibraryHint');
 
   if (!trackEl) return;
 
   if (!track) {
     trackEl.textContent = 'Nothing playing';
     if (artistEl) artistEl.textContent = 'Connect Spotify to begin';
-    if (miTrackName) miTrackName.textContent = 'Nothing playing';
-    if (miTrackArtist) miTrackArtist.textContent = '—';
-    if (miAlbumArt) miAlbumArt.removeAttribute('src');
-    if (npTrackEl) npTrackEl.textContent = 'Choose a mood or connect music';
+    if (npTrackEl) npTrackEl.textContent = 'How does this moment feel?';
     if (npArtistEl) npArtistEl.textContent = '';
-    if (artEl) { artEl.removeAttribute('src'); artEl.classList.remove('loaded'); }
-    if (discEl) discEl.classList.add('paused');
-    if (moodDetectEl) moodDetectEl.textContent = '';
+    if (coverEl) {
+      coverEl.removeAttribute('src');
+      coverEl.classList.remove('loaded');
+    }
+    if (hintEl && window._auroraAutoMode !== false) {
+      hintEl.textContent = 'Connect Spotify — your music will guide the carousel';
+    }
+    _isPlaying = false;
+    _updatePlayPauseUI();
     _updateProgress(0, 0);
     return;
   }
@@ -680,20 +709,20 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 
   trackEl.textContent = track.name;
   if (artistEl) artistEl.textContent = artists;
-  if (miTrackName) miTrackName.textContent = track.name;
-  if (miTrackArtist) miTrackArtist.textContent = artists;
   if (npTrackEl) npTrackEl.textContent = track.name;
   if (npArtistEl) npArtistEl.textContent = artists;
 
   const artUrl = track.album?.images?.[0]?.url;
-  if (artEl && artUrl && artEl.src !== artUrl) {
-    artEl.classList.remove('loaded');
-    artEl.onload = () => artEl.classList.add('loaded');
-    artEl.src = artUrl;
+  if (coverEl && artUrl) {
+    if (coverEl.src !== artUrl) {
+      coverEl.classList.remove('loaded');
+      coverEl.onload = () => coverEl.classList.add('loaded');
+      coverEl.src = artUrl;
+      coverEl.alt = `${track.name} album art`;
+    } else if (!coverEl.classList.contains('loaded')) {
+      coverEl.classList.add('loaded');
+    }
   }
-  if (miAlbumArt && artUrl && miAlbumArt.src !== artUrl) miAlbumArt.src = artUrl;
-
-  if (discEl) discEl.classList.toggle('paused', !isPlaying);
 
   _isPlaying = isPlaying;
   _updatePlayPauseUI();
@@ -706,14 +735,19 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   }
 }
 
-function _announceMood(mood, track) {
-  const detectEl = document.getElementById('moodDetect');
+function _announceMood(mood, track, confidence = 0) {
   const npMoodEl = document.getElementById('npMood');
+  const hintEl = document.getElementById('moodLibraryHint');
   if (!mood) return;
 
-  const msg = `This song ${_MOOD_COPY[mood] || 'feels unique'} — <strong>${mood}</strong>`;
-  if (detectEl) detectEl.innerHTML = msg;
+  const label = mood.charAt(0).toUpperCase() + mood.slice(1);
+  const msg = `This song ${_MOOD_COPY[mood] || 'feels unique'} — <strong>${label}</strong>`;
   if (npMoodEl) npMoodEl.innerHTML = msg;
+  if (hintEl && window._auroraAutoMode !== false) {
+    hintEl.textContent = confidence
+      ? `Auto · ${label} · ${Math.round(confidence)}% match`
+      : `Auto · ${label}`;
+  }
 }
 
 function _setConnectedUI(connected) {
@@ -792,8 +826,10 @@ function _disconnect() {
   }
 })();
 
-document.getElementById('spotifyConnectBtn').addEventListener('click', _initiateAuth);
-document.getElementById('spotifyDisconnectBtn').addEventListener('click', _disconnect);
+const _connectBtn = document.getElementById('spotifyConnectBtn');
+const _disconnectBtn = document.getElementById('spotifyDisconnectBtn');
+if (_connectBtn) _connectBtn.addEventListener('click', _initiateAuth);
+if (_disconnectBtn) _disconnectBtn.addEventListener('click', _disconnect);
 
 // Playback controls
 document.getElementById('playPauseBtn').addEventListener('click', _playPause);
@@ -815,7 +851,7 @@ _searchInput.addEventListener('keydown', (e) => {
 
 // Close results when clicking outside
 document.addEventListener('click', (e) => {
-  const section = document.querySelector('.mi-search-wrap');
+  const section = document.querySelector('.drawer-search-wrap');
   if (section && !section.contains(e.target)) _hideSearchResults();
 });
 
@@ -840,25 +876,8 @@ if (_progressTrack) {
   });
 }
 
-// ─── Auto/Manual segmented control ───
-function _setAutoMode(on) {
-  window._auroraAutoMode = on;
-  const onRadio = document.getElementById('autoOn');
-  const offRadio = document.getElementById('autoOff');
-  if (onRadio && offRadio) {
-    onRadio.checked = on;
-    offRadio.checked = !on;
-  }
-}
-['autoOn', 'autoOff'].forEach((id) => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('change', () => _setAutoMode(id === 'autoOn'));
-});
-_setAutoMode(true);
-
-// ─── Mini play/pause button in Mood Instrument ───
-const _miMiniPlayBtn = document.getElementById('miMiniPlayBtn');
-if (_miMiniPlayBtn) _miMiniPlayBtn.addEventListener('click', _playPause);
+window._auroraAutoMode = true;
+window._auroraManualLock = false;
 
 // ─── Expand / Focus mode ───
 const _expandBtn = document.getElementById('expandBtn');

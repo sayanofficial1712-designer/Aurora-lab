@@ -228,8 +228,17 @@ const colorSliders = [
 ];
 const shareBtn = document.getElementById('shareBtn');
 const resetBtn = document.getElementById('resetBtn');
-const moodGrid = document.getElementById('moodGrid');
-const moodResult = document.getElementById('moodResult');
+const moodCarouselTrack = document.getElementById('moodCarouselTrack');
+const moodLibraryHint = document.getElementById('moodLibraryHint');
+const modeAutoBtn = document.getElementById('modeAutoBtn');
+const modeLockBtn = document.getElementById('modeLockBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+const drawerBackdrop = document.getElementById('drawerBackdrop');
+const settingsDrawer = document.getElementById('settingsDrawer');
+
+/** Curated Mood Library — carousel order (left to right) */
+const LIBRARY_MOODS = ['dreamy', 'electric', 'cozy', 'calm', 'bold'];
 const sliderValueLabels = {
   speed: document.getElementById('speedValue'),
   mouse: document.getElementById('mouseValue'),
@@ -243,43 +252,64 @@ const DEFAULT_SLIDERS = { speed: 30, mouse: 30, intensity: 40, distortion: 40 };
 const MOODS = {
   calm: {
     label: 'Calm',
+    descriptor: 'Soft waves, slow breath.',
     message: 'Soft waves, slow breath.',
+    glow: 'linear-gradient(145deg, #a8d4e6, #b8e0d2)',
     colors: ['#a8d4e6', '#b8e0d2', '#d4e8f0', '#c9dde8', '#b5d4c8'],
     speed: 15, mouse: 20, intensity: 25, distortion: 15,
   },
   dreamy: {
     label: 'Dreamy',
+    descriptor: 'Floating through pastels.',
     message: 'Floating through pastels.',
+    glow: 'linear-gradient(145deg, #f5a8d1, #c4b8f5)',
     colors: DEFAULT_COLORS,
     speed: 30, mouse: 30, intensity: 40, distortion: 40,
   },
   bold: {
     label: 'Bold',
+    descriptor: 'Turn up the volume.',
     message: 'Turn up the volume.',
+    glow: 'linear-gradient(145deg, #ff6b9d, #6b5bff)',
     colors: ['#ff6b9d', '#c44dff', '#ff8c42', '#6b5bff', '#ff4d8d'],
     speed: 42, mouse: 35, intensity: 48, distortion: 45,
   },
   cozy: {
     label: 'Cozy',
+    descriptor: 'Warm blanket energy.',
     message: 'Warm blanket energy.',
+    glow: 'linear-gradient(145deg, #f5c4a8, #ffd4b8)',
     colors: ['#f5c4a8', '#e8b4a0', '#ffd4b8', '#f0a888', '#ffdcc8'],
     speed: 24, mouse: 28, intensity: 38, distortion: 28,
   },
   electric: {
     label: 'Electric',
+    descriptor: 'Buzzing with ideas.',
     message: 'Buzzing with ideas.',
+    glow: 'linear-gradient(145deg, #00e5c7, #7b61ff)',
     colors: ['#00e5c7', '#7b61ff', '#ff61dc', '#61d4ff', '#c8ff61'],
     speed: 50, mouse: 45, intensity: 50, distortion: 50,
   },
   mellow: {
     label: 'Mellow',
+    descriptor: 'Quiet afternoon light.',
     message: 'Quiet afternoon light.',
+    glow: 'linear-gradient(145deg, #9aabb8, #b8a9c9)',
     colors: ['#9aabb8', '#b8a9c9', '#a9b8c4', '#c4b8a9', '#8899aa'],
     speed: 18, mouse: 22, intensity: 24, distortion: 20,
   },
 };
 
+/** Map detected moods outside the library to nearest carousel card */
+function toLibraryMood(moodId) {
+  if (LIBRARY_MOODS.includes(moodId)) return moodId;
+  if (moodId === 'mellow') return 'calm';
+  return 'dreamy';
+}
+
 let activeMood = null;
+let carouselIndex = 2;
+let moodConfidence = 0;
 
 function hexToRgb(hex) {
   const value = hex.replace('#', '');
@@ -334,17 +364,135 @@ function updateSliderLabels() {
   sliderValueLabels.distortion.textContent = distortionSlider.value;
 }
 
-function setActiveMood(moodId) {
-  activeMood = moodId;
-  document.querySelectorAll('.mood-chip').forEach((chip) => {
-    chip.classList.toggle('active', chip.dataset.mood === moodId);
+function layoutCarousel() {
+  const cards = document.querySelectorAll('.mood-card');
+  const spacing = 168;
+  const maxAngle = 52;
+
+  cards.forEach((card, i) => {
+    const offset = i - carouselIndex;
+    const abs = Math.abs(offset);
+    const angle = Math.max(-maxAngle, Math.min(maxAngle, offset * 14));
+    const z = 120 - abs * 28;
+    const scale = offset === 0 ? 1.14 : Math.max(0.78, 1 - abs * 0.1);
+    const x = offset * spacing;
+    const opacity = abs > 2 ? 0.35 : abs > 1 ? 0.65 : 1;
+
+    card.style.transform = `translateX(${x}px) translateZ(${z}px) rotateY(${angle}deg) scale(${scale})`;
+    card.style.opacity = String(opacity);
+    card.style.zIndex = String(10 - abs);
+    card.classList.toggle('is-active', offset === 0);
   });
+}
+
+function centerCarousel(moodId) {
+  const libId = toLibraryMood(moodId);
+  const idx = LIBRARY_MOODS.indexOf(libId);
+  if (idx >= 0 && idx !== carouselIndex) {
+    carouselIndex = idx;
+    layoutCarousel();
+  }
+  setActiveMood(libId, { skipCarousel: true });
+}
+
+function setActiveMood(moodId, options = {}) {
+  const libId = toLibraryMood(moodId);
+  activeMood = libId;
+  if (!options.skipCarousel) {
+    const idx = LIBRARY_MOODS.indexOf(libId);
+    if (idx >= 0) carouselIndex = idx;
+  }
+  document.querySelectorAll('.mood-card').forEach((card) => {
+    card.classList.toggle('is-active', card.dataset.mood === libId);
+    const confEl = card.querySelector('[data-confidence]');
+    if (confEl && card.dataset.mood === libId && moodConfidence > 0) {
+      confEl.textContent = `${Math.round(moodConfidence)}%`;
+    }
+  });
+  layoutCarousel();
+  if (moodLibraryHint && !window.spotifyState?.connected) {
+    moodLibraryHint.textContent = MOODS[libId]?.descriptor || '';
+  }
+}
+
+function setMoodConfidence(percent) {
+  moodConfidence = Math.max(0, Math.min(100, percent));
+  const active = document.querySelector('.mood-card.is-active [data-confidence]');
+  if (active) active.textContent = `${Math.round(moodConfidence)}%`;
 }
 
 function clearActiveMood() {
   activeMood = null;
-  document.querySelectorAll('.mood-chip').forEach((chip) => chip.classList.remove('active'));
-  moodResult.textContent = 'Your own mix — keep tweaking!';
+  document.querySelectorAll('.mood-card').forEach((card) => card.classList.remove('is-active'));
+  if (moodLibraryHint) moodLibraryHint.textContent = 'Your palette is uniquely yours';
+}
+
+function buildMoodLibrary() {
+  if (!moodCarouselTrack) return;
+  moodCarouselTrack.innerHTML = '';
+
+  LIBRARY_MOODS.forEach((moodId) => {
+    const mood = MOODS[moodId];
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'mood-card';
+    card.dataset.mood = moodId;
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('aria-label', `${mood.label} mood`);
+
+    const swatches = mood.colors
+      .map((c) => `<span class="mood-swatch" style="background:${c}"></span>`)
+      .join('');
+
+    card.innerHTML = `
+      <div class="mood-card-inner">
+        <div class="mood-card-glow" style="--mood-glow:${mood.glow}"></div>
+        <span class="mood-card-label">${mood.label}</span>
+        <div class="mood-card-detail">
+          <span class="mood-card-name">${mood.label}</span>
+          <span class="mood-card-desc">${mood.descriptor}</span>
+          <div class="mood-palette-preview">${swatches}</div>
+          <span class="mood-confidence">Match <span data-confidence>—</span></span>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      window._auroraManualLock = true;
+      if (modeLockBtn) modeLockBtn.classList.add('active');
+      if (modeAutoBtn) modeAutoBtn.classList.remove('active');
+      window._auroraAutoMode = false;
+      applyMood(moodId);
+    });
+
+    moodCarouselTrack.appendChild(card);
+  });
+
+  layoutCarousel();
+}
+
+function openSettings() {
+  if (settingsDrawer) {
+    settingsDrawer.classList.add('is-open');
+    settingsDrawer.setAttribute('aria-hidden', 'false');
+  }
+  if (drawerBackdrop) {
+    drawerBackdrop.hidden = false;
+    requestAnimationFrame(() => drawerBackdrop.classList.add('is-open'));
+  }
+  if (settingsBtn) settingsBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeSettings() {
+  if (settingsDrawer) {
+    settingsDrawer.classList.remove('is-open');
+    settingsDrawer.setAttribute('aria-hidden', 'true');
+  }
+  if (drawerBackdrop) {
+    drawerBackdrop.classList.remove('is-open');
+    setTimeout(() => { drawerBackdrop.hidden = true; }, 450);
+  }
+  if (settingsBtn) settingsBtn.setAttribute('aria-expanded', 'false');
 }
 
 let _transitionToken = 0;
@@ -356,7 +504,7 @@ function transitionToMood(moodId, duration = 1600) {
   const myToken = ++_transitionToken;
 
   setActiveMood(moodId);
-  moodResult.textContent = mood.message;
+  if (moodLibraryHint) moodLibraryHint.textContent = mood.descriptor;
 
   const startColors = colorSliders.map((i) => i.value);
   const startVals = {
@@ -397,7 +545,11 @@ function resetPalette() {
   transitionToMood('dreamy', 1400);
 }
 
-window.transitionToMood = transitionToMood;
+window.transitionToMood = (moodId, duration = 1600) => {
+  const libId = toLibraryMood(moodId);
+  centerCarousel(libId);
+  transitionToMood(libId, duration);
+};
 
 function loadFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -425,7 +577,7 @@ function loadFromURL() {
     if (colorsMatchMood) {
       setSliders(mood);
       setActiveMood(moodParam);
-      moodResult.textContent = mood.message;
+      if (moodLibraryHint) moodLibraryHint.textContent = mood.descriptor;
       return;
     }
   }
@@ -447,23 +599,46 @@ function updateShareURL() {
   return url;
 }
 
-Object.keys(MOODS).forEach((moodId) => {
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'mood-chip';
-  chip.dataset.mood = moodId;
-  chip.textContent = MOODS[moodId].label;
-  chip.addEventListener('click', () => applyMood(moodId));
-  moodGrid.appendChild(chip);
-});
+buildMoodLibrary();
 
 loadFromURL();
 if (!activeMood && !window.location.search) {
   setSliders(DEFAULT_SLIDERS);
   setActiveMood('dreamy');
-  moodResult.textContent = MOODS.dreamy.message;
+  if (moodLibraryHint) moodLibraryHint.textContent = MOODS.dreamy.descriptor;
 }
 updateSliderLabels();
+
+if (modeAutoBtn) {
+  modeAutoBtn.addEventListener('click', () => {
+    window._auroraAutoMode = true;
+    window._auroraManualLock = false;
+    modeAutoBtn.classList.add('active');
+    modeLockBtn.classList.remove('active');
+    if (moodLibraryHint) moodLibraryHint.textContent = 'Spotify will guide the carousel';
+  });
+}
+if (modeLockBtn) {
+  modeLockBtn.addEventListener('click', () => {
+    window._auroraAutoMode = false;
+    window._auroraManualLock = true;
+    modeLockBtn.classList.add('active');
+    modeAutoBtn.classList.remove('active');
+    if (moodLibraryHint) moodLibraryHint.textContent = 'Mood locked — songs won\'t change it';
+  });
+}
+if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeSettings);
+if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeSettings);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+window.centerMoodCarousel = centerCarousel;
+window.setMoodConfidence = setMoodConfidence;
+window.toLibraryMood = toLibraryMood;
+window.LIBRARY_MOODS = LIBRARY_MOODS;
 
 colorSliders.forEach((input) => {
   input.addEventListener('input', () => {
@@ -489,13 +664,13 @@ shareBtn.addEventListener('click', async () => {
     shareBtn.textContent = 'Link copied!';
     shareBtn.classList.add('copied');
     setTimeout(() => {
-      shareBtn.textContent = 'Copy your aurora link';
+      shareBtn.textContent = 'Copy Aurora Link';
       shareBtn.classList.remove('copied');
     }, 2000);
   } catch {
     shareBtn.textContent = 'Copy failed — try again';
     setTimeout(() => {
-      shareBtn.textContent = 'Copy your aurora link';
+      shareBtn.textContent = 'Copy Aurora Link';
     }, 2000);
   }
 });
