@@ -1,12 +1,20 @@
 const canvas = document.getElementById('aurora');
-const gl = canvas.getContext('webgl');
+const gl = canvas.getContext('webgl', {
+  alpha: false,
+  antialias: true,
+  premultipliedAlpha: false,
+  preserveDrawingBuffer: true,
+});
 
 if (!gl) {
-  alert('WebGL not supported');
-  throw new Error('WebGL not supported');
+  document.body.classList.add('webgl-fallback');
+  console.error('[Aurora] WebGL not available');
+} else {
+  document.body.classList.remove('webgl-fallback');
 }
 
 function resize() {
+  if (!gl) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.floor(window.innerWidth * dpr);
   canvas.height = Math.floor(window.innerHeight * dpr);
@@ -15,8 +23,10 @@ function resize() {
   gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-resize();
-window.addEventListener('resize', resize);
+if (gl) {
+  resize();
+  window.addEventListener('resize', resize);
+}
 
 const vertexShaderSource = `
   attribute vec2 position;
@@ -155,34 +165,57 @@ function createProgram(vertexSource, fragmentSource) {
   return program;
 }
 
-const program = createProgram(vertexShaderSource, fragmentShaderSource);
-gl.useProgram(program);
+const program = gl ? createProgram(vertexShaderSource, fragmentShaderSource) : null;
+if (gl && program) gl.useProgram(program);
+else if (gl) console.error('[Aurora] Shader program failed to link');
 
 const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-const buffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+let buffer;
+let positionLocation;
+let resolutionLocation;
+let timeLocation;
+let mouseLocation;
+let speedLocation;
+let mouseStrengthLocation;
+let intensityLocation;
+let distortionLocation;
+let color1Location;
+let color2Location;
+let color3Location;
+let color4Location;
+let color5Location;
+let warmCoolShiftLocation;
+let saturationBoostLocation;
 
-const positionLocation = gl.getAttribLocation(program, 'position');
-gl.enableVertexAttribArray(positionLocation);
-gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+if (gl && program) {
+  buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-const resolutionLocation = gl.getUniformLocation(program, 'resolution');
-const timeLocation = gl.getUniformLocation(program, 'time');
-const mouseLocation = gl.getUniformLocation(program, 'mouse');
-const speedLocation = gl.getUniformLocation(program, 'speed');
-const mouseStrengthLocation = gl.getUniformLocation(program, 'mouseStrength');
-const intensityLocation = gl.getUniformLocation(program, 'intensity');
-const distortionLocation = gl.getUniformLocation(program, 'distortionAmount');
-const color1Location = gl.getUniformLocation(program, 'color1');
-const color2Location = gl.getUniformLocation(program, 'color2');
-const color3Location = gl.getUniformLocation(program, 'color3');
-const color4Location = gl.getUniformLocation(program, 'color4');
-const color5Location = gl.getUniformLocation(program, 'color5');
-const warmCoolShiftLocation = gl.getUniformLocation(program, 'warmCoolShift');
-const saturationBoostLocation = gl.getUniformLocation(program, 'saturationBoost');
+  positionLocation = gl.getAttribLocation(program, 'position');
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-const { MOODS, LIBRARY_MOODS, toLibraryMood } = window.AuroraMoods;
+  resolutionLocation = gl.getUniformLocation(program, 'resolution');
+  timeLocation = gl.getUniformLocation(program, 'time');
+  mouseLocation = gl.getUniformLocation(program, 'mouse');
+  speedLocation = gl.getUniformLocation(program, 'speed');
+  mouseStrengthLocation = gl.getUniformLocation(program, 'mouseStrength');
+  intensityLocation = gl.getUniformLocation(program, 'intensity');
+  distortionLocation = gl.getUniformLocation(program, 'distortionAmount');
+  color1Location = gl.getUniformLocation(program, 'color1');
+  color2Location = gl.getUniformLocation(program, 'color2');
+  color3Location = gl.getUniformLocation(program, 'color3');
+  color4Location = gl.getUniformLocation(program, 'color4');
+  color5Location = gl.getUniformLocation(program, 'color5');
+  warmCoolShiftLocation = gl.getUniformLocation(program, 'warmCoolShift');
+  saturationBoostLocation = gl.getUniformLocation(program, 'saturationBoost');
+}
+
+if (!window.AuroraMoods) {
+  console.error('[Aurora] moods.js failed to load — check script order and network.');
+}
+const { MOODS, LIBRARY_MOODS, toLibraryMood } = window.AuroraMoods || { MOODS: {}, LIBRARY_MOODS: [], toLibraryMood: (id) => id || 'dreamy' };
 
 const speedSlider = document.getElementById('speed');
 const mouseInfluenceSlider = document.getElementById('mouseInfluence');
@@ -341,7 +374,6 @@ function buildMoodVault() {
     `;
 
     card.addEventListener('mouseenter', () => {
-      if (window._auroraAutoMode === false) return;
       applyMoodVisuals(moodId, 600);
     });
 
@@ -545,8 +577,20 @@ if (modeLockBtn) {
   });
 }
 
-if (controlsToggle) controlsToggle.addEventListener('click', openControls);
+if (controlsToggle) {
+  controlsToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openControls();
+  });
+}
 if (controlsCloseBtn) controlsCloseBtn.addEventListener('click', closeControls);
+
+document.addEventListener('click', (e) => {
+  if (!controlsPanelWrap?.classList.contains('is-open')) return;
+  if (controlsPanelWrap.contains(e.target)) return;
+  closeControls();
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeControls();
@@ -572,9 +616,9 @@ colorSliders.forEach((input) => {
   });
 });
 
-resetBtn.addEventListener('click', resetPalette);
+if (resetBtn) resetBtn.addEventListener('click', resetPalette);
 
-shareBtn.addEventListener('click', async () => {
+if (shareBtn) shareBtn.addEventListener('click', async () => {
   const url = updateShareURL();
   try {
     await navigator.clipboard.writeText(url);
@@ -590,7 +634,7 @@ shareBtn.addEventListener('click', async () => {
   }
 });
 
-exportBtn.addEventListener('click', () => {
+if (exportBtn) exportBtn.addEventListener('click', () => {
   const original = exportBtn.innerHTML;
   try {
     const link = document.createElement('a');
@@ -612,14 +656,27 @@ let startTime = Date.now();
 const mouse = { x: 0.5, y: 0.5 };
 
 function render() {
-  const elapsed = (Date.now() - startTime) / 1000;
   if (window.tickSpotify) window.tickSpotify();
 
-  const scaleValue = (input) => (Number(input.value) - 10) / 40;
+  if (!gl || !program) {
+    requestAnimationFrame(render);
+    return;
+  }
+
+  const elapsed = (Date.now() - startTime) / 1000;
+  const scaleValue = (input) => (Number(input?.value || 28) - 10) / 40;
   const speed = 0.08 + scaleValue(speedSlider) * 0.62;
   const mouseStrength = 0;
   const intensity = 0.7 + scaleValue(intensitySlider) * 0.8;
   const distortion = 0.08 + scaleValue(distortionSlider) * 0.65;
+
+  gl.clearColor(0.96, 0.96, 0.95, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
   gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
   gl.uniform1f(timeLocation, elapsed);
@@ -633,6 +690,7 @@ function render() {
 
   const colorLocations = [color1Location, color2Location, color3Location, color4Location, color5Location];
   colorSliders.forEach((input, i) => {
+    if (!input || !colorLocations[i]) return;
     const [r, g, b] = hexToRgb(input.value);
     gl.uniform3f(colorLocations[i], r, g, b);
   });

@@ -29,7 +29,11 @@ html, body {
   overflow: hidden;
   font-family: var(--font);
   color: var(--text-primary);
-  background: #f4f4f2;
+  background: #e8e4f0;
+}
+
+body.webgl-fallback {
+  background: linear-gradient(160deg, #f5c8f6 0%, #dcceff 35%, #cfe9ff 70%, #e8d4f8 100%);
 }
 
 button, input, select, textarea { font-family: inherit; }
@@ -52,6 +56,10 @@ button, input, select, textarea { font-family: inherit; }
   height: 100vh;
   z-index: 0;
   pointer-events: none;
+  display: block;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 .glass-white {
@@ -887,16 +895,20 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   position: fixed;
   bottom: var(--gap);
   right: var(--gap);
-  z-index: 15;
+  z-index: 30;
+  pointer-events: auto;
 }
 
 .controls-toggle {
+  position: relative;
+  z-index: 2;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   border: 1px solid var(--glass-border);
-  background: var(--glass-white);
+  background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
@@ -904,6 +916,7 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   justify-content: center;
   transition: background 0.35s ease, transform 0.35s ease, color 0.35s ease;
   box-shadow: var(--glass-shadow);
+  pointer-events: auto;
 }
 
 .controls-toggle:hover {
@@ -913,9 +926,8 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
 }
 
 .controls-panel-wrap.is-open .controls-toggle {
-  opacity: 0;
+  opacity: 0.35;
   pointer-events: none;
-  transform: scale(0.9);
 }
 
 .controls-panel {
