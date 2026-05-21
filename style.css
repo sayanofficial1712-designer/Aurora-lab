@@ -32,6 +32,10 @@ html, body {
   background: #e8d4f8;
 }
 
+body:not(.webgl-fallback) {
+  background: transparent;
+}
+
 body.webgl-fallback {
   background:
     radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245, 200, 246, 0.85) 0%, transparent 55%),

@@ -51,6 +51,10 @@ const fragmentShaderSource = `
   uniform vec3 color5;
   uniform float warmCoolShift;
   uniform float saturationBoost;
+  uniform float uBlobScale;
+  uniform float uWarpScale;
+  uniform float uFlowScale;
+  uniform float uWashStrength;
 
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -88,13 +92,13 @@ const fragmentShaderSource = `
     vec2 pos = uv;
     pos.x *= aspect;
 
-    float t = time * speed * 1.25;
+    float t = time * speed * 1.25 * uFlowScale;
 
-    // Large atmospheric blobs — low frequency = bigger shapes
-    float blobA = snoise(pos * 0.36 + vec2(t * 0.78, t * 0.52));
-    float blobB = snoise(pos * 0.30 - vec2(t * 0.62, t * 0.48) + 9.0);
-    float blobC = snoise(pos * 0.44 + t * 0.55 + 21.0);
-    float blobD = snoise(pos * 0.26 + t * 0.38 + 33.0);
+    float blobFreq = 0.36 / max(uBlobScale, 0.5);
+    float blobA = snoise(pos * blobFreq + vec2(t * 0.78, t * 0.52));
+    float blobB = snoise(pos * (blobFreq * 0.83) - vec2(t * 0.62, t * 0.48) + 9.0);
+    float blobC = snoise(pos * (blobFreq * 1.22) + t * 0.55 + 21.0);
+    float blobD = snoise(pos * (blobFreq * 0.72) + t * 0.38 + 33.0);
 
     // Sharpen blob contrast for visible color masses
     float massA = pow(abs(blobA) * 0.55 + 0.45, 1.35);
@@ -110,7 +114,7 @@ const fragmentShaderSource = `
     vec2 distort = vec2(
       snoise(pos * 0.65 + t * 0.88),
       snoise(pos * 0.65 - t * 0.76 + 5.0)
-    ) * distortionAmount * 1.75;
+    ) * distortionAmount * 1.75 * uWarpScale;
 
     vec2 mousePos = mouse;
     mousePos.x *= aspect;
@@ -143,9 +147,9 @@ const fragmentShaderSource = `
     float highlight = massA * massB * 0.14 + massC * 0.06;
     color += highlight;
 
-    // Dreamy pastel wash — lilac blush lift (background only)
-    vec3 dreamyWash = vec3(0.98, 0.90, 0.99);
-    color = mix(color, color * dreamyWash + vec3(0.04, 0.02, 0.06), 0.22);
+    // Optional mood wash (0 = off, driven by active mood from JS)
+    vec3 moodWash = vec3(0.98, 0.90, 0.99);
+    color = mix(color, color * moodWash + vec3(0.04, 0.02, 0.06), uWashStrength);
 
     float soft = snoise(p * 2.0 + t * 0.18) * 0.065;
     color += soft;
@@ -212,6 +216,10 @@ let color4Location;
 let color5Location;
 let warmCoolShiftLocation;
 let saturationBoostLocation;
+let uBlobScaleLocation;
+let uWarpScaleLocation;
+let uFlowScaleLocation;
+let uWashStrengthLocation;
 
 if (gl && program) {
   buffer = gl.createBuffer();
@@ -236,6 +244,10 @@ if (gl && program) {
   color5Location = gl.getUniformLocation(program, 'color5');
   warmCoolShiftLocation = gl.getUniformLocation(program, 'warmCoolShift');
   saturationBoostLocation = gl.getUniformLocation(program, 'saturationBoost');
+  uBlobScaleLocation = gl.getUniformLocation(program, 'uBlobScale');
+  uWarpScaleLocation = gl.getUniformLocation(program, 'uWarpScale');
+  uFlowScaleLocation = gl.getUniformLocation(program, 'uFlowScale');
+  uWashStrengthLocation = gl.getUniformLocation(program, 'uWashStrength');
 }
 
 if (!window.AuroraMoods) {
@@ -279,6 +291,59 @@ const sliderValueLabels = {
 };
 
 const DEFAULT_SLIDERS = { speed: 38, mouse: 0, intensity: 48, distortion: 44 };
+
+/** Debug session — add ?debug=1 for per-frame logs. Multipliers always boosted until verified. */
+const AURORA_DEBUG = new URLSearchParams(window.location.search).has('debug') || true;
+const DEBUG_MULT = { flow: 2, blob: 2, warp: 3 };
+
+let _renderFrame = 0;
+let _lastLoggedMood = null;
+
+function logPipelineAudit() {
+  const uniformMap = {
+    resolution: resolutionLocation,
+    time: timeLocation,
+    speed: speedLocation,
+    intensity: intensityLocation,
+    distortionAmount: distortionLocation,
+    color1: color1Location,
+    uBlobScale: uBlobScaleLocation,
+    uWarpScale: uWarpScaleLocation,
+    uFlowScale: uFlowScaleLocation,
+    uWashStrength: uWashStrengthLocation,
+  };
+  const missing = Object.entries(uniformMap).filter(([, loc]) => !loc).map(([k]) => k);
+  console.log('[Aurora] pipeline audit', {
+    webgl: !!gl,
+    program: !!program,
+    canvas: canvas ? { w: canvas.width, h: canvas.height, client: `${canvas.clientWidth}×${canvas.clientHeight}` } : null,
+    missingUniforms: missing.length ? missing : 'none',
+    debug: AURORA_DEBUG,
+    debugMult: DEBUG_MULT,
+    colorInputs: colorSliders.map((el) => el?.value),
+  });
+  if (missing.length) console.error('[Aurora] BROKEN LINK: missing uniforms →', missing);
+}
+
+function logShaderParams(source) {
+  const colors = colorSliders.map((el) => el?.value);
+  console.log(`[Aurora] shader params (${source})`, {
+    activeMood: activeMood,
+    colors,
+    sliders: {
+      flow: distortionSlider?.value,
+      blur: speedSlider?.value,
+      intensity: intensitySlider?.value,
+    },
+    debugMult: DEBUG_MULT,
+  });
+}
+
+function washStrengthForMood(moodId) {
+  if (moodId === 'dreamy') return AURORA_DEBUG ? 0.28 : 0.18;
+  if (moodId === 'midnight' || moodId === 'locked_in') return 0;
+  return 0.06;
+}
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -460,6 +525,14 @@ function transitionToMood(moodId, duration = 850) {
   const myToken = ++_transitionToken;
   setActiveMood(libId);
   updateLockMoodUI();
+  _lastLoggedMood = null;
+
+  console.log('[Aurora] mood → render', {
+    moodId: libId,
+    label: mood.label,
+    targetColors: mood.colors,
+    targetSliders: { speed: mood.speed, intensity: mood.intensity, distortion: mood.distortion },
+  });
 
   const startColors = colorSliders.map((i) => i.value);
   const startGlow = startColors.slice(0, 3);
@@ -502,6 +575,7 @@ function transitionToMood(moodId, duration = 850) {
     else {
       updateMoodGlow(libId, mood.colors);
       updateShareURL();
+      logShaderParams(`transition complete → ${libId}`);
     }
   }
   tick();
@@ -689,25 +763,38 @@ if (exportBtn) exportBtn.addEventListener('click', () => {
 const brandBtn = document.getElementById('brandBtn');
 if (brandBtn) brandBtn.addEventListener('click', () => applyMoodVisuals('dreamy', 900));
 
+updateSliderLabels();
+if (gl && program) logPipelineAudit();
+
 let startTime = Date.now();
 const mouse = { x: 0.5, y: 0.5 };
+
+function readClearColorFromSliders() {
+  const [r, g, b] = hexToRgb(colorSliders[0]?.value || '#E8D4F8');
+  return [r, g, b, 1.0];
+}
 
 function render() {
   if (window.tickSpotify) window.tickSpotify();
 
   if (!gl || !program) {
+    if (AURORA_DEBUG && _renderFrame % 120 === 0) {
+      console.warn('[Aurora] render skipped — no gl/program', { gl: !!gl, program: !!program });
+    }
     requestAnimationFrame(render);
     return;
   }
 
+  _renderFrame += 1;
   const elapsed = (Date.now() - startTime) / 1000;
   const scaleValue = (input) => (Number(input?.value || 38) - 10) / 40;
-  const speed = 0.20 + scaleValue(speedSlider) * 1.08;
+  const speed = (0.20 + scaleValue(speedSlider) * 1.08);
   const mouseStrength = 0;
   const intensity = 0.90 + scaleValue(intensitySlider) * 1.05;
-  const distortion = 0.24 + scaleValue(distortionSlider) * 1.08;
+  const distortion = (0.24 + scaleValue(distortionSlider) * 1.08) * DEBUG_MULT.flow;
 
-  gl.clearColor(0.94, 0.86, 0.98, 1.0);
+  const [cr, cg, cb] = readClearColorFromSliders();
+  gl.clearColor(cr, cg, cb, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.useProgram(program);
@@ -724,16 +811,59 @@ function render() {
   gl.uniform1f(distortionLocation, distortion);
   gl.uniform1f(warmCoolShiftLocation, 0.0);
   gl.uniform1f(saturationBoostLocation, 0.0);
+  gl.uniform1f(uBlobScaleLocation, DEBUG_MULT.blob);
+  gl.uniform1f(uWarpScaleLocation, DEBUG_MULT.warp);
+  gl.uniform1f(uFlowScaleLocation, DEBUG_MULT.flow);
+  gl.uniform1f(uWashStrengthLocation, washStrengthForMood(activeMood));
 
   const colorLocations = [color1Location, color2Location, color3Location, color4Location, color5Location];
+  const rgbSnapshot = [];
   colorSliders.forEach((input, i) => {
     if (!input || !colorLocations[i]) return;
     const [r, g, b] = hexToRgb(input.value);
+    rgbSnapshot.push([r, g, b]);
     gl.uniform3f(colorLocations[i], r, g, b);
   });
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  const glErr = gl.getError();
+  if (glErr !== gl.NO_ERROR && AURORA_DEBUG) {
+    console.error('[Aurora] WebGL error after draw:', glErr);
+  }
+
+  if (AURORA_DEBUG && new URLSearchParams(window.location.search).has('debug')) {
+    if (_renderFrame % 120 === 0) {
+      console.log('[Aurora] render frame', _renderFrame, {
+        time: elapsed.toFixed(2),
+        activeMood,
+        uniforms: { speed, distortion, intensity, blob: DEBUG_MULT.blob, warp: DEBUG_MULT.warp, flow: DEBUG_MULT.flow },
+        colors: colorSliders.map((el) => el?.value),
+        clearColor: rgbSnapshot[0],
+        canvas: `${canvas.width}×${canvas.height}`,
+      });
+    }
+    if (activeMood !== _lastLoggedMood) {
+      _lastLoggedMood = activeMood;
+      logShaderParams('active mood changed');
+    }
+  }
+
   requestAnimationFrame(render);
 }
+
+window.AuroraDebug = {
+  getFrame: () => _renderFrame,
+  getActiveMood: () => activeMood,
+  getColors: () => colorSliders.map((el) => el?.value),
+  getSliders: () => ({
+    flow: distortionSlider?.value,
+    blur: speedSlider?.value,
+    intensity: intensitySlider?.value,
+  }),
+  getDebugMult: () => DEBUG_MULT,
+  logShaderParams,
+  logPipelineAudit,
+};
 
 render();
