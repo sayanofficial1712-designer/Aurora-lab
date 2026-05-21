@@ -17,165 +17,179 @@
         <span class="brand-dot" aria-hidden="true"></span>
         <span class="brand-name">Aurora Lab</span>
       </button>
-      <button type="button" class="settings-trigger" id="settingsBtn" aria-expanded="false" aria-controls="settingsDrawer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-        </svg>
-        <span>Settings</span>
-      </button>
     </header>
 
-    <!-- Center: emotional discovery -->
-    <main class="discovery-stage" aria-live="polite">
-      <section class="discovery-header">
-        <p class="discovery-label" id="discoveryLabel">Mood Library</p>
-        <h1 class="discovery-title" id="npTrack">How does this moment feel?</h1>
-        <p class="discovery-sub" id="npArtist"></p>
-        <p class="discovery-mood" id="npMood"></p>
-      </section>
-
-      <section class="mood-library" aria-label="Mood Library">
-        <div class="mood-mode" role="group" aria-label="Mood mode">
-          <button type="button" class="mode-btn active" id="modeAutoBtn" data-mode="auto">Auto</button>
-          <button type="button" class="mode-btn" id="modeLockBtn" data-mode="lock">Lock mood</button>
-        </div>
-
-        <div class="mood-carousel-scene">
-          <div class="mood-carousel-track" id="moodCarouselTrack" role="list"></div>
-        </div>
-
-        <p class="mood-library-hint" id="moodLibraryHint">Connect Spotify — your music will guide the carousel</p>
+    <!-- Center stage — cinematic calm -->
+    <main class="center-stage" aria-live="polite">
+      <section class="center-stage-inner">
+        <p class="stage-label" id="discoveryLabel">Now in your Aurora</p>
+        <h1 class="stage-mood" id="stageMood">Dreamy</h1>
+        <p class="stage-track" id="npTrack"></p>
+        <p class="stage-atmosphere" id="stageAtmosphere">soft flow • gentle light • dreamy</p>
+        <p class="stage-confidence" id="npMood" hidden></p>
       </section>
     </main>
 
-    <!-- Bottom player -->
-    <footer class="player-dock" id="playerDock">
-      <div class="player-zone player-left">
-        <div class="player-hero" id="playerHero">
-          <div class="player-cover-wrap">
-            <img class="player-cover" id="playerCover" alt="" width="88" height="88">
-            <div class="player-cover-glow" aria-hidden="true"></div>
-          </div>
-          <div class="player-track-info">
-            <span class="player-track" id="spotifyTrack">Nothing playing</span>
-            <span class="player-artist" id="spotifyArtist">Connect Spotify to begin</span>
-          </div>
+    <!-- Mood Cassette Vault — hero -->
+    <section class="mood-vault-wrap" aria-label="Mood Library">
+      <div class="mood-mode" role="group" aria-label="Mood mode">
+        <button type="button" class="mode-btn active" id="modeAutoBtn" data-mode="auto">Auto</button>
+        <button type="button" class="mode-btn" id="modeLockBtn" data-mode="lock">Lock mood</button>
+      </div>
+
+      <div class="cassette-vault">
+        <div class="cassette-cover">
+          <div class="cassette-track" id="moodVaultTrack" role="list"></div>
         </div>
       </div>
 
-      <div class="player-zone player-center">
-        <div class="player-controls">
+      <p class="vault-hint" id="moodLibraryHint">Hover to preview · Click to lock mood</p>
+
+      <div class="mood-soundtrack" id="moodSoundtrack" hidden>
+        <button type="button" class="soundtrack-btn" id="generateSoundtrackBtn">Generate soundtrack</button>
+        <div class="soundtrack-stack" id="soundtrackStack" role="list" aria-label="Recommended tracks"></div>
+      </div>
+    </section>
+
+    <!-- Music Capsule — top right -->
+    <aside class="music-capsule glass-white" id="musicCapsule" aria-label="Music">
+      <div class="capsule-collapsed" id="capsuleCollapsed">
+        <img class="capsule-mini-art" id="playerCover" alt="" width="48" height="48">
+        <div class="capsule-mini-info">
+          <span class="capsule-mini-title" id="spotifyTrack">Nothing playing</span>
+          <span class="capsule-mini-artist" id="spotifyArtist">Connect Spotify</span>
+        </div>
+        <div class="capsule-eq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <button type="button" class="capsule-mini-play player-btn play-pause" id="playPauseBtn" aria-label="Play / pause">
+          <svg class="icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
+
+      <div class="capsule-expanded" id="capsuleExpanded" hidden>
+        <div class="capsule-track-row">
+          <img class="capsule-art" id="capsuleArt" alt="" width="44" height="44">
+          <div class="capsule-track-info">
+            <span class="capsule-track-title" id="capsuleTrackTitle">Nothing playing</span>
+            <span class="capsule-track-artist" id="capsuleTrackArtist">Connect Spotify</span>
+          </div>
+          <div class="capsule-eq capsule-eq--large" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="vinyl-stage" id="vinylStage">
+          <div class="vinyl-disc" id="vinylDisc">
+            <img class="vinyl-art" id="vinylArt" alt="" width="120" height="120">
+          </div>
+          <div class="vinyl-tonearm" aria-hidden="true"></div>
+        </div>
+
+        <div class="capsule-controls player-controls">
           <button type="button" class="player-btn" id="prevBtn" aria-label="Previous track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
           </button>
-          <button type="button" class="player-btn play-pause" id="playPauseBtn" aria-label="Play / pause">
+          <button type="button" class="player-btn play-pause capsule-play" id="playPauseBtnExpanded" aria-label="Play / pause">
             <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
           <button type="button" class="player-btn" id="nextBtn" aria-label="Next track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
           </button>
+          <button type="button" class="player-btn" id="repeatBtn" aria-label="Repeat" title="Repeat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
         </div>
-        <div class="player-progress">
-          <span class="time-label" id="progressTime">0:00</span>
-          <div class="progress-track" id="progressTrack" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" tabindex="0">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-          <span class="time-label" id="durationTime">0:00</span>
-        </div>
-      </div>
 
-      <div class="player-zone player-right">
-        <div class="volume-control">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/>
-          </svg>
-          <input type="range" id="volumeSlider" min="0" max="100" value="70" aria-label="Volume">
-        </div>
-        <button type="button" class="player-icon-btn" id="expandBtn" aria-label="Focus mode" title="Focus mode">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M4 10V4h6M20 10V4h-6M4 14v6h6M20 14v6h-6"/>
-          </svg>
-        </button>
-      </div>
-    </footer>
-
-    <!-- Settings drawer (hidden by default) -->
-    <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
-    <aside class="settings-drawer glass-panel" id="settingsDrawer" aria-hidden="true">
-      <div class="drawer-header">
-        <h2>Settings</h2>
-        <button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="Close settings">&times;</button>
-      </div>
-
-      <section class="drawer-section">
-        <h3 class="drawer-heading">Spotify</h3>
-        <button type="button" class="spotify-connect-btn" id="spotifyConnectBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-          </svg>
-          Connect Spotify
-        </button>
-        <div class="drawer-search-wrap">
-          <svg class="drawer-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/>
-          </svg>
-          <input type="text" id="searchInput" class="drawer-search-input" placeholder="Search for a song…" autocomplete="off" spellcheck="false">
+        <div class="capsule-search-wrap">
+          <input type="text" id="searchInput" class="capsule-search-input" placeholder="Search soundtrack…" autocomplete="off" spellcheck="false">
           <ul class="search-results" id="searchResults"></ul>
         </div>
-        <button type="button" class="drawer-disconnect" id="spotifyDisconnectBtn">Disconnect</button>
-        <p class="drawer-status" id="playbackMsg"></p>
-      </section>
 
-      <section class="drawer-section">
-        <h3 class="drawer-heading">Palette</h3>
-        <div class="color-pickers">
-          <input type="color" id="color1" value="#f5a8d1" aria-label="Color 1">
-          <input type="color" id="color2" value="#c4b8f5" aria-label="Color 2">
-          <input type="color" id="color3" value="#a8e8de" aria-label="Color 3">
-          <input type="color" id="color4" value="#fccccb" aria-label="Color 4">
-          <input type="color" id="color5" value="#e6a8f0" aria-label="Color 5">
+        <div class="capsule-connection">
+          <button type="button" class="spotify-connect-btn" id="spotifyConnectBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02z"/>
+            </svg>
+            Connect Spotify
+          </button>
+          <button type="button" class="capsule-disconnect" id="spotifyDisconnectBtn">Disconnect</button>
+          <p class="capsule-status" id="playbackMsg"></p>
         </div>
-      </section>
+      </div>
 
-      <section class="drawer-section">
-        <h3 class="drawer-heading">Motion</h3>
-        <div class="control-group">
-          <div class="control-label-row"><label for="speed">Speed</label><span class="control-value" id="speedValue">30</span></div>
-          <input type="range" id="speed" min="10" max="50" value="30">
-          <div class="control-scale"><span>Soft</span><span>Dynamic</span></div>
-        </div>
-        <div class="control-group">
-          <div class="control-label-row"><label for="intensity">Intensity</label><span class="control-value" id="intensityValue">40</span></div>
-          <input type="range" id="intensity" min="10" max="50" value="40">
-          <div class="control-scale"><span>Soft</span><span>Dynamic</span></div>
-        </div>
-        <div class="control-group">
-          <div class="control-label-row"><label for="distortion">Flow</label><span class="control-value" id="distortionValue">40</span></div>
-          <input type="range" id="distortion" min="10" max="50" value="40">
-          <div class="control-scale"><span>Soft</span><span>Dynamic</span></div>
-        </div>
-        <input type="range" id="mouseInfluence" min="10" max="50" value="30" hidden>
-        <span id="mouseValue" hidden>30</span>
-      </section>
-
-      <section class="drawer-section drawer-actions">
-        <button type="button" class="text-btn" id="resetBtn">Reset palette</button>
-        <button type="button" class="share-btn" id="shareBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M10 14a5 5 0 0 1 0-7l3-3a5 5 0 0 1 7 7l-1.5 1.5M14 10a5 5 0 0 1 0 7l-3 3a5 5 0 0 1-7-7l1.5-1.5" stroke-linecap="round"/>
-          </svg>
-          Copy Aurora Link
-        </button>
-      </section>
+      <span class="sr-only" id="npArtist"></span>
+      <div class="capsule-progress sr-only">
+        <span id="progressTime">0:00</span>
+        <div id="progressTrack" role="slider" tabindex="0"><div id="progressFill"></div></div>
+        <span id="durationTime">0:00</span>
+      </div>
     </aside>
 
-    <!-- Hidden vinyl refs for spotify compat (display:none) -->
-    <img id="vinylArt" class="sr-only" alt="" hidden>
-    <div id="vinylDisc" class="sr-only" hidden></div>
-    <div id="vinylStage" hidden></div>
+    <!-- Controls Panel — bottom right -->
+    <aside class="controls-panel-wrap">
+      <button type="button" class="controls-toggle" id="controlsToggle" aria-expanded="false" aria-controls="controlsPanel" aria-label="Open controls">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+
+      <div class="controls-panel glass-white" id="controlsPanel" aria-hidden="true">
+        <div class="controls-header">
+          <h2>Controls</h2>
+          <button type="button" class="controls-close" id="controlsCloseBtn" aria-label="Close controls">&times;</button>
+        </div>
+
+        <section class="controls-section">
+          <h3 class="controls-heading">Motion</h3>
+          <div class="control-group">
+            <div class="control-label-row"><label for="distortion">Flow</label><span class="control-value" id="flowValue">36</span></div>
+            <input type="range" id="distortion" min="10" max="50" value="36">
+          </div>
+          <div class="control-group">
+            <div class="control-label-row"><label for="intensity">Intensity</label><span class="control-value" id="intensityValue">42</span></div>
+            <input type="range" id="intensity" min="10" max="50" value="42">
+          </div>
+          <div class="control-group">
+            <div class="control-label-row"><label for="speed">Blur</label><span class="control-value" id="blurValue">28</span></div>
+            <input type="range" id="speed" min="10" max="50" value="28">
+          </div>
+        </section>
+
+        <section class="controls-section">
+          <h3 class="controls-heading">Palette</h3>
+          <div class="color-pickers">
+            <input type="color" id="color1" value="#F5C8F6" aria-label="Color 1">
+            <input type="color" id="color2" value="#DCCEFF" aria-label="Color 2">
+            <input type="color" id="color3" value="#CFE9FF" aria-label="Color 3">
+            <input type="color" id="color4" value="#D6D9FF" aria-label="Color 4">
+            <input type="color" id="color5" value="#E8D4F8" aria-label="Color 5">
+          </div>
+          <button type="button" class="text-btn" id="resetBtn">Reset to mood palette</button>
+        </section>
+
+        <section class="controls-section">
+          <h3 class="controls-heading">Share</h3>
+          <button type="button" class="share-btn" id="exportBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export image
+          </button>
+          <button type="button" class="share-btn" id="shareBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 14a5 5 0 0 1 0-7l3-3a5 5 0 0 1 7 7l-1.5 1.5M14 10a5 5 0 0 1 0 7l-3 3a5 5 0 0 1-7-7l1.5-1.5" stroke-linecap="round"/></svg>
+            Copy mood link
+          </button>
+        </section>
+      </div>
+    </aside>
   </div>
 
+  <input type="range" id="mouseInfluence" min="10" max="50" value="0" hidden>
+  <span id="mouseValue" hidden>0</span>
+  <input type="range" id="volumeSlider" min="0" max="100" value="70" hidden>
+
+  <script src="moods.js"></script>
   <script src="aurora.js"></script>
   <script src="spotify.js"></script>
 </body>

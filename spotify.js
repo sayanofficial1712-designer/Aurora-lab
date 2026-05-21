@@ -5,9 +5,13 @@
 // Redirect URI in your Spotify app settings.
 // ─────────────────────────────────────────────────────────────
 const SPOTIFY_CLIENT_ID = 'a0b0a5190eff47bd92e15db39f5d37e6';
-const SPOTIFY_REDIRECT_URI = window.location.hostname === 'localhost'
-  ? 'http://localhost:3000'
-  : 'https://sayanofficial1712-designer.github.io/Aurora-lab/';
+/** Must match a Redirect URI in your Spotify app dashboard exactly */
+function _spotifyRedirectUri() {
+  const path = window.location.pathname.replace(/index\.html$/i, '');
+  const base = path.endsWith('/') ? path : `${path}/`;
+  return `${window.location.origin}${base}`;
+}
+const SPOTIFY_REDIRECT_URI = _spotifyRedirectUri();
 const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state user-read-private user-read-recently-played';
 
 // ─────────────────────────────────────────────────────────────
@@ -19,14 +23,15 @@ window.spotifyState = {
   valence: 0.5,
   tempo: 120,
   danceability: 0.5,
+  acousticness: 0.5,
 };
 
-// Target values — interpolated smoothly toward current song's features
 const _target = {
   energy: 0.5,
   valence: 0.5,
   tempo: 120,
   danceability: 0.5,
+  acousticness: 0.5,
 };
 
 // Called every frame from aurora.js to smoothly lerp toward target
@@ -39,6 +44,7 @@ window.tickSpotify = function () {
   s.valence = lerp(s.valence, _target.valence, speed);
   s.tempo = lerp(s.tempo, _target.tempo, speed);
   s.danceability = lerp(s.danceability, _target.danceability, speed);
+  s.acousticness = lerp(s.acousticness, _target.acousticness, speed);
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -236,24 +242,24 @@ async function _skipPrev() {
   }
 }
 
-async function _playTrackUri(uri, trackName) {
+async function _playTrackUri(uri, trackName, options = {}) {
   const resp = await _controlFetch('PUT', 'https://api.spotify.com/v1/me/player/play', { uris: [uri] });
   if (resp) {
-    _showControlFeedback(`Controlling your Spotify session`);
+    _showControlFeedback(`Playing ${trackName || 'track'}`);
     _lastTrackId = null;
-    _hideSearchResults();
-    document.getElementById('searchInput').value = '';
+    if (!options.keepSearch) _hideSearchResults();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && !options.keepSearch) searchInput.value = '';
     setTimeout(_poll, 1000);
   }
 }
 
 function _updatePlayPauseUI() {
-  const btn = document.getElementById('playPauseBtn');
-  if (btn) btn.classList.toggle('playing', _isPlaying);
-  const hero = document.getElementById('playerHero');
-  if (hero) hero.classList.toggle('is-playing', _isPlaying);
-  const wrap = document.querySelector('.player-cover-wrap');
-  if (wrap) wrap.classList.toggle('is-playing', _isPlaying);
+  document.querySelectorAll('.play-pause').forEach((btn) => {
+    btn.classList.toggle('playing', _isPlaying);
+  });
+  const capsule = document.getElementById('musicCapsule');
+  if (capsule) capsule.classList.toggle('is-playing', _isPlaying);
 }
 
 // ─── Progress bar ───
@@ -386,27 +392,37 @@ function _hideSearchResults() {
 
 // Genre → audio-feature heuristics. Widened spread so different songs feel dramatically different.
 const _GENRE_PROFILES = [
-  { match: /(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb)/i, energy: 0.95, valence: 0.75, tempo: 140, danceability: 0.92 },
-  { match: /(dance|club)/i,                                       energy: 0.9,  valence: 0.78, tempo: 128, danceability: 0.9  },
-  { match: /(rock|metal|punk|grunge|hardcore)/i,                  energy: 0.88, valence: 0.5,  tempo: 135, danceability: 0.5  },
-  { match: /(k-pop|j-pop|anime)/i,                                energy: 0.85, valence: 0.82, tempo: 125, danceability: 0.85 },
-  { match: /(latin|reggaeton|salsa|samba|bossa|afrobeat)/i,       energy: 0.82, valence: 0.85, tempo: 105, danceability: 0.9  },
-  { match: /(hip\s?hop|rap|trap|drill)/i,                         energy: 0.75, valence: 0.55, tempo: 95,  danceability: 0.82 },
-  { match: /(pop)/i,                                              energy: 0.72, valence: 0.72, tempo: 118, danceability: 0.78 },
-  { match: /(r&b|soul|funk|disco)/i,                              energy: 0.6,  valence: 0.72, tempo: 100, danceability: 0.82 },
-  { match: /(country)/i,                                          energy: 0.55, valence: 0.62, tempo: 105, danceability: 0.55 },
-  { match: /(jazz|blues|swing)/i,                                 energy: 0.4,  valence: 0.5,  tempo: 105, danceability: 0.5  },
-  { match: /(folk|acoustic|singer-songwriter|indie\s*folk)/i,     energy: 0.32, valence: 0.48, tempo: 90,  danceability: 0.4  },
-  { match: /(classical|orchestral|piano|baroque|opera)/i,         energy: 0.22, valence: 0.42, tempo: 80,  danceability: 0.22 },
-  { match: /(ambient|chill|lofi|lo-fi|new age|downtempo|sleep)/i, energy: 0.15, valence: 0.42, tempo: 72,  danceability: 0.4  },
+  { match: /(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb)/i, energy: 0.95, valence: 0.75, tempo: 140, danceability: 0.92, acousticness: 0.08 },
+  { match: /(dance|club)/i,                                       energy: 0.9,  valence: 0.78, tempo: 128, danceability: 0.9,  acousticness: 0.1  },
+  { match: /(rock|metal|punk|grunge|hardcore)/i,                  energy: 0.88, valence: 0.5,  tempo: 135, danceability: 0.5,  acousticness: 0.18 },
+  { match: /(k-pop|j-pop|anime)/i,                                energy: 0.85, valence: 0.82, tempo: 125, danceability: 0.85, acousticness: 0.15 },
+  { match: /(latin|reggaeton|salsa|samba|bossa|afrobeat)/i,       energy: 0.82, valence: 0.85, tempo: 105, danceability: 0.9,  acousticness: 0.28 },
+  { match: /(hip\s?hop|rap|trap|drill)/i,                         energy: 0.75, valence: 0.55, tempo: 95,  danceability: 0.82, acousticness: 0.14 },
+  { match: /(pop)/i,                                              energy: 0.72, valence: 0.72, tempo: 118, danceability: 0.78, acousticness: 0.22 },
+  { match: /(r&b|soul|funk|disco)/i,                              energy: 0.6,  valence: 0.72, tempo: 100, danceability: 0.82, acousticness: 0.38 },
+  { match: /(country)/i,                                          energy: 0.55, valence: 0.62, tempo: 105, danceability: 0.55, acousticness: 0.62 },
+  { match: /(jazz|blues|swing)/i,                                 energy: 0.4,  valence: 0.5,  tempo: 105, danceability: 0.5,  acousticness: 0.55 },
+  { match: /(folk|acoustic|singer-songwriter|indie\s*folk)/i,     energy: 0.32, valence: 0.48, tempo: 90,  danceability: 0.4,  acousticness: 0.78 },
+  { match: /(classical|orchestral|piano|baroque|opera)/i,         energy: 0.22, valence: 0.42, tempo: 80,  danceability: 0.22, acousticness: 0.88 },
+  { match: /(ambient|chill|lofi|lo-fi|new age|downtempo|sleep)/i, energy: 0.15, valence: 0.42, tempo: 72,  danceability: 0.4,  acousticness: 0.72 },
+];
+
+const _ACOUSTIC_GENRE_BOOST = [
+  { match: /(folk|acoustic|singer-songwriter|indie\s*folk|classical|orchestral|piano|baroque|opera|country|bossa)/i, acousticness: 0.82 },
+  { match: /(jazz|blues|swing|r&b|soul)/i, acousticness: 0.58 },
+  { match: /(pop|rock|indie)/i, acousticness: 0.35 },
+  { match: /(edm|electronic|house|techno|trance|dubstep|dance|hip\s?hop|rap|trap|k-pop)/i, acousticness: 0.12 },
 ];
 
 // Keyword hints in track/album titles — pushed further to extremes
 const _TITLE_HINTS = [
-  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25, mood: 'mellow' },
-  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i,           energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'calm' },
-  { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i,                   energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95, mood: 'electric' },
-  { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i,                    energy: 0.7,  valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
+  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25, mood: 'calm' },
+  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i, energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'calm' },
+  { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i, energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95, mood: 'electric' },
+  { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i, energy: 0.7, valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
+  { match: /(midnight|night|dark|moon|after dark)/i, energy: 0.28, valence: 0.35, tempo: 82, danceability: 0.35, mood: 'midnight' },
+  { match: /(memory|memories|nostalg|retro|90s|childhood|old days)/i, energy: 0.42, valence: 0.55, tempo: 95, danceability: 0.45, mood: 'memory_lane' },
+  { match: /(focus|work|study|locked|grind|phonk)/i, energy: 0.55, valence: 0.45, tempo: 105, danceability: 0.5, mood: 'locked_in' },
 ];
 
 // Hardcoded artist-name hints for artists whose Spotify genre tags are sparse/generic.
@@ -465,11 +481,17 @@ function _inferMoodHint(genres, text, artistNames) {
   if (/(rock|metal|punk|hardcore|k-pop|j-pop|anime|latin|reggaeton|afrobeat|hip.?hop|rap|trap|drill|pop)/i.test(genreText)) {
     return 'bold';
   }
+  if (/(folk|acoustic|singer.?songwriter|blues|indie.?folk)/i.test(genreText)) {
+    return 'memory_lane';
+  }
   if (/(ambient|chill|lofi|lo-fi|new.?age|downtempo|sleep|classical|orchestral|piano|baroque|opera)/i.test(genreText)) {
     return 'calm';
   }
-  if (/(folk|acoustic|singer.?songwriter|blues|indie.?folk)/i.test(genreText)) {
-    return 'mellow';
+  if (/(synthwave|trip.?hop|dark.?ambient)/i.test(genreText)) {
+    return 'midnight';
+  }
+  if (/(phonk|focus|study beats)/i.test(genreText)) {
+    return 'locked_in';
   }
   if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
     return 'cozy';
@@ -503,15 +525,23 @@ async function _deriveFeatures(token, track) {
   const titleMatch = _TITLE_HINTS.find((p) => p.match.test(searchText));
   const moodHint = _inferMoodHint(genres, searchText, artistNames);
 
-  let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6 };
+  let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6, acousticness: 0.4 };
   if (titleMatch) {
     base = {
       energy: (base.energy + titleMatch.energy) / 2,
       valence: (base.valence + titleMatch.valence) / 2,
       tempo: (base.tempo + titleMatch.tempo) / 2,
       danceability: (base.danceability + titleMatch.danceability) / 2,
+      acousticness: base.acousticness,
     };
   }
+
+  const acousticBoost = _ACOUSTIC_GENRE_BOOST.find((p) =>
+    genres.some((g) => p.match.test(g)) || p.match.test(searchText)
+  );
+  let acousticness = base.acousticness ?? 0.4;
+  if (acousticBoost) acousticness = (acousticness + acousticBoost.acousticness) / 2;
+  if (/(acoustic|unplugged|live|piano|strings)/i.test(searchText)) acousticness = Math.min(1, acousticness + 0.15);
 
   const popularity = (fullTrack.popularity ?? 50) / 100;
   const durationMs = fullTrack.duration_ms || 200000;
@@ -532,12 +562,14 @@ async function _deriveFeatures(token, track) {
   valence = Math.min(1, Math.max(0.15, valence + jitter));
   tempo = Math.min(180, Math.max(60, tempo + jitter * 25));
   danceability = Math.min(1, Math.max(0.15, danceability + jitter));
+  acousticness = Math.min(1, Math.max(0.05, acousticness + jitter * 0.5));
 
   return {
     energy,
     valence,
     tempo,
     danceability,
+    acousticness,
     _source: genreMatch ? `genre:${genres[0] || 'matched'}` : titleMatch ? 'title-hint' : 'default',
     _genres: genres,
     _moodHint: moodHint,
@@ -575,11 +607,13 @@ async function _loadTrackAndApplyMood(token, track) {
     valence: +features.valence.toFixed(2),
     tempo: Math.round(features.tempo),
     danceability: +features.danceability.toFixed(2),
+    acousticness: +features.acousticness.toFixed(2),
+    moodScores: features._moodScores,
   });
 
   const autoOn = window._auroraAutoMode !== false;
   if (autoOn && typeof window.transitionToMood === 'function') {
-    window.transitionToMood(libMood, 1800);
+    window.transitionToMood(libMood, 900);
   }
 
   _announceMood(libMood, track, confidence);
@@ -614,6 +648,7 @@ function _applyFeatures(features, snap = false) {
   _target.valence = features.valence;
   _target.tempo = features.tempo;
   _target.danceability = features.danceability;
+  _target.acousticness = features.acousticness;
 
   if (snap) {
     const s = window.spotifyState;
@@ -621,83 +656,140 @@ function _applyFeatures(features, snap = false) {
     s.valence = features.valence;
     s.tempo = features.tempo;
     s.danceability = features.danceability;
+    s.acousticness = features.acousticness;
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// UI helpers
+// Mood scoring — weighted, never 1 song → 1 mood (from moods.js)
 // ─────────────────────────────────────────────────────────────
-function _computeConfidence(features, mood) {
-  const { energy, valence, danceability, tempo } = features;
-  let score = 55;
+const _SCORE_WEIGHTS = window.AuroraMoods.SCORE_WEIGHTS;
+const _LIBRARY_MOOD_IDS = window.AuroraMoods.LIBRARY_MOODS;
 
-  if (features._moodHint === mood || features._moodHint === 'mellow' && mood === 'calm') {
-    score = 88;
-  } else {
-    const profiles = {
-      electric: { energy: 0.85, valence: 0.7, danceability: 0.85, tempo: 128 },
-      bold: { energy: 0.65, valence: 0.55, danceability: 0.6, tempo: 115 },
-      cozy: { energy: 0.45, valence: 0.72, danceability: 0.65, tempo: 100 },
-      calm: { energy: 0.25, valence: 0.5, danceability: 0.35, tempo: 75 },
-      dreamy: { energy: 0.45, valence: 0.55, danceability: 0.5, tempo: 95 },
-    };
-    const p = profiles[mood] || profiles.dreamy;
-    const dist =
-      Math.abs(energy - p.energy) +
-      Math.abs(valence - p.valence) +
-      Math.abs(danceability - p.danceability) +
-      Math.min(1, Math.abs(tempo - p.tempo) / 80);
-    score = Math.round(78 - dist * 35);
+function _normalizeTempo(tempo) {
+  return Math.max(0, Math.min(1, (tempo - 60) / 120));
+}
+
+function _rangeFit(value, min, max) {
+  if (min != null && value < min) return Math.max(0, 1 - (min - value) / 0.35);
+  if (max != null && value > max) return Math.max(0, 1 - (value - max) / 0.35);
+  return 1;
+}
+
+function _proximityFit(value, target) {
+  return Math.max(0, 1 - Math.abs(value - target) / 0.45);
+}
+
+function _scoreMood(features, moodId) {
+  const profile = window.AuroraMoods.MOODS[moodId];
+  if (!profile) return 0;
+
+  const { energy, valence, tempo, danceability, acousticness } = features;
+  const c = profile.constraints || {};
+  const t = profile.targets;
+
+  let constraintPenalty = 1;
+  if (c.acousticnessMin != null) constraintPenalty *= _rangeFit(acousticness, c.acousticnessMin, null);
+  if (c.energyMin != null) constraintPenalty *= _rangeFit(energy, c.energyMin, null);
+  if (c.energyMax != null) constraintPenalty *= _rangeFit(energy, null, c.energyMax);
+  if (c.valenceMin != null) constraintPenalty *= _rangeFit(valence, c.valenceMin, null);
+  if (c.valenceMax != null) constraintPenalty *= _rangeFit(valence, null, c.valenceMax);
+  if (c.tempoMin != null) constraintPenalty *= _rangeFit(tempo / 180, c.tempoMin / 180, null);
+  if (c.tempoMax != null) constraintPenalty *= _rangeFit(tempo / 180, null, c.tempoMax / 180);
+  if (c.danceabilityMin != null) constraintPenalty *= _rangeFit(danceability, c.danceabilityMin, null);
+
+  const energyFit = _proximityFit(energy, t.energy);
+  const valenceFit = _proximityFit(valence, t.valence);
+  const tempoFit = _proximityFit(_normalizeTempo(tempo), _normalizeTempo(t.tempo));
+  const acousticFit = _proximityFit(acousticness, t.acousticness);
+
+  const raw =
+    _SCORE_WEIGHTS.valence * valenceFit +
+    _SCORE_WEIGHTS.energy * energyFit +
+    _SCORE_WEIGHTS.acousticness * acousticFit +
+    _SCORE_WEIGHTS.tempo * tempoFit;
+
+  return raw * constraintPenalty;
+}
+
+function _scoreAllMoods(features) {
+  const scores = {};
+  for (const moodId of _LIBRARY_MOOD_IDS) {
+    let score = _scoreMood(features, moodId);
+    const hint = window.AuroraMoods.toLibraryMood(features._moodHint);
+    if (hint === moodId) score += 0.08;
+    scores[moodId] = score;
   }
-
-  return Math.max(42, Math.min(96, score));
+  return scores;
 }
 
 function _detectMood(features) {
-  const { energy, valence, danceability, tempo } = features;
-
-  // Artist/title/genre hint wins always — most reliable signal
-  if (features._moodHint) return features._moodHint;
-
-  // Numeric fallback — looser thresholds so neutral defaults don't all land on dreamy
-  if (energy >= 0.75 || (energy >= 0.6 && danceability >= 0.75) || tempo >= 126) return 'electric';
-  if (energy >= 0.55 || tempo >= 110) return 'bold';
-  if (energy <= 0.3 && valence >= 0.35) return 'calm';
-  if (valence <= 0.38 || energy <= 0.3) return 'mellow';
-  if (valence >= 0.58 || danceability >= 0.65) return 'cozy';
-  return 'dreamy';
+  const scores = _scoreAllMoods(features);
+  let best = 'dreamy';
+  let bestScore = -1;
+  for (const [moodId, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      best = moodId;
+    }
+  }
+  features._moodScores = scores;
+  return best;
 }
 
-const _MOOD_COPY = {
-  calm: 'sounds like a calm moment',
-  dreamy: 'sounds dreamy and floating',
-  bold: 'feels confident and bold',
-  cozy: 'has a cozy, warm pull',
-  electric: 'is buzzing with energy',
-  mellow: 'carries a mellow weight',
-};
+function _computeConfidence(features, mood) {
+  const scores = features._moodScores || _scoreAllMoods(features);
+  const top = scores[mood] ?? 0;
+  const sorted = Object.values(scores).sort((a, b) => b - a);
+  const runnerUp = sorted[1] ?? 0;
+  const margin = top - runnerUp;
+  const scorePct = Math.round(42 + top * 54 + margin * 12);
+  return Math.max(42, Math.min(96, scorePct));
+}
+
+function _setArtOnElements(artUrl, trackName) {
+  const ids = ['playerCover', 'capsuleArt', 'vinylArt'];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el || !artUrl) return;
+    if (el.src !== artUrl) {
+      el.classList?.remove('loaded');
+      el.onload = () => el.classList?.add('loaded');
+      el.src = artUrl;
+      el.alt = trackName ? `${trackName} album art` : '';
+    } else if (el.classList && !el.classList.contains('loaded')) {
+      el.classList.add('loaded');
+    }
+  });
+}
+
+function _clearArtElements() {
+  ['playerCover', 'capsuleArt', 'vinylArt'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.removeAttribute('src');
+    el.classList?.remove('loaded');
+  });
+}
 
 function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   const trackEl = document.getElementById('spotifyTrack');
   const artistEl = document.getElementById('spotifyArtist');
-  const coverEl = document.getElementById('playerCover');
-  const npTrackEl = document.getElementById('npTrack');
-  const npArtistEl = document.getElementById('npArtist');
+  const capsuleTitle = document.getElementById('capsuleTrackTitle');
+  const capsuleArtist = document.getElementById('capsuleTrackArtist');
   const hintEl = document.getElementById('moodLibraryHint');
 
   if (!trackEl) return;
 
   if (!track) {
     trackEl.textContent = 'Nothing playing';
-    if (artistEl) artistEl.textContent = 'Connect Spotify to begin';
-    if (npTrackEl) npTrackEl.textContent = 'How does this moment feel?';
-    if (npArtistEl) npArtistEl.textContent = '';
-    if (coverEl) {
-      coverEl.removeAttribute('src');
-      coverEl.classList.remove('loaded');
-    }
+    if (artistEl) artistEl.textContent = 'Connect Spotify';
+    if (capsuleTitle) capsuleTitle.textContent = 'Nothing playing';
+    if (capsuleArtist) capsuleArtist.textContent = 'Connect Spotify';
+    if (typeof window.setStageTrack === 'function') window.setStageTrack('');
+    _clearArtElements();
     if (hintEl && window._auroraAutoMode !== false) {
-      hintEl.textContent = 'Connect Spotify — your music will guide the carousel';
+      hintEl.textContent = 'Connect Spotify — music guides your mood';
     }
     _isPlaying = false;
     _updatePlayPauseUI();
@@ -706,29 +798,23 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   }
 
   const artists = track.artists.map((a) => a.name).join(', ');
+  const title = track.name;
 
-  trackEl.textContent = track.name;
+  trackEl.textContent = title;
   if (artistEl) artistEl.textContent = artists;
-  if (npTrackEl) npTrackEl.textContent = track.name;
-  if (npArtistEl) npArtistEl.textContent = artists;
+  if (capsuleTitle) capsuleTitle.textContent = title;
+  if (capsuleArtist) capsuleArtist.textContent = artists;
+  if (typeof window.setStageTrack === 'function') window.setStageTrack(title);
 
   const artUrl = track.album?.images?.[0]?.url;
-  if (coverEl && artUrl) {
-    if (coverEl.src !== artUrl) {
-      coverEl.classList.remove('loaded');
-      coverEl.onload = () => coverEl.classList.add('loaded');
-      coverEl.src = artUrl;
-      coverEl.alt = `${track.name} album art`;
-    } else if (!coverEl.classList.contains('loaded')) {
-      coverEl.classList.add('loaded');
-    }
-  }
+  if (artUrl) _setArtOnElements(artUrl, title);
 
   _isPlaying = isPlaying;
   _updatePlayPauseUI();
+  if (isPlaying) _expandCapsule();
 
   if (playbackData) {
-    _syncProgressFromSpotify(playbackData.progress_ms || 0, track.duration_ms || 0, isPlaying);
+    _syncProgressFromSpotify(playbackData.progress_ms || 0, track.duration_ms || 0);
     if (typeof playbackData.device?.volume_percent === 'number') {
       _syncVolumeFromSpotify(playbackData.device.volume_percent);
     }
@@ -736,17 +822,22 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 }
 
 function _announceMood(mood, track, confidence = 0) {
-  const npMoodEl = document.getElementById('npMood');
+  const libMood = window.AuroraMoods.toLibraryMood(mood);
+  const moodData = window.AuroraMoods.MOODS[libMood];
   const hintEl = document.getElementById('moodLibraryHint');
-  if (!mood) return;
 
-  const label = mood.charAt(0).toUpperCase() + mood.slice(1);
-  const msg = `This song ${_MOOD_COPY[mood] || 'feels unique'} — <strong>${label}</strong>`;
-  if (npMoodEl) npMoodEl.innerHTML = msg;
-  if (hintEl && window._auroraAutoMode !== false) {
+  if (typeof window.updateCenterStage === 'function') {
+    window.updateCenterStage(libMood);
+  }
+
+  if (typeof window.setMoodConfidence === 'function') {
+    window.setMoodConfidence(confidence);
+  }
+
+  if (hintEl && window._auroraAutoMode !== false && moodData) {
     hintEl.textContent = confidence
-      ? `Auto · ${label} · ${Math.round(confidence)}% match`
-      : `Auto · ${label}`;
+      ? `${moodData.label} (${Math.round(confidence)}%)`
+      : moodData.label;
   }
 }
 
@@ -832,26 +923,37 @@ if (_connectBtn) _connectBtn.addEventListener('click', _initiateAuth);
 if (_disconnectBtn) _disconnectBtn.addEventListener('click', _disconnect);
 
 // Playback controls
-document.getElementById('playPauseBtn').addEventListener('click', _playPause);
-document.getElementById('nextBtn').addEventListener('click', _skipNext);
-document.getElementById('prevBtn').addEventListener('click', _skipPrev);
+document.querySelectorAll('#playPauseBtn, #playPauseBtnExpanded').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _playPause();
+  });
+});
+document.getElementById('nextBtn')?.addEventListener('click', _skipNext);
+document.getElementById('prevBtn')?.addEventListener('click', _skipPrev);
+document.getElementById('repeatBtn')?.addEventListener('click', () => {
+  _showControlFeedback('Repeat toggled on device');
+});
 
 // Search
 const _searchInput = document.getElementById('searchInput');
-_searchInput.addEventListener('input', (e) => {
-  clearTimeout(_searchTimer);
-  const q = e.target.value.trim();
-  if (!q) { _hideSearchResults(); return; }
-  _searchTimer = setTimeout(() => _searchTracks(q), 350);
-});
+if (_searchInput) {
+  _searchInput.addEventListener('input', (e) => {
+    clearTimeout(_searchTimer);
+    const q = e.target.value.trim();
+    if (!q) { _hideSearchResults(); return; }
+    _searchTimer = setTimeout(() => _searchTracks(q), 350);
+    _expandCapsule();
+  });
 
-_searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { _hideSearchResults(); _searchInput.value = ''; }
-});
+  _searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { _hideSearchResults(); _searchInput.value = ''; }
+  });
+}
 
 // Close results when clicking outside
 document.addEventListener('click', (e) => {
-  const section = document.querySelector('.drawer-search-wrap');
+  const section = document.querySelector('.capsule-search-wrap');
   if (section && !section.contains(e.target)) _hideSearchResults();
 });
 
@@ -879,11 +981,203 @@ if (_progressTrack) {
 window._auroraAutoMode = true;
 window._auroraManualLock = false;
 
-// ─── Expand / Focus mode ───
-const _expandBtn = document.getElementById('expandBtn');
-if (_expandBtn) {
-  _expandBtn.addEventListener('click', () => {
-    document.body.classList.toggle('focus-mode');
+// ─────────────────────────────────────────────────────────────
+// Lock mood → soundtrack recommendations
+// ─────────────────────────────────────────────────────────────
+const _MOOD_SOUNDTRACK = Object.fromEntries(
+  Object.entries(window.AuroraMoods.MOODS).map(([id, mood]) => [id, mood.soundtrack])
+);
+
+const _soundtrackStack = document.getElementById('soundtrackStack');
+const _generateSoundtrackBtn = document.getElementById('generateSoundtrackBtn');
+let _soundtrackLoading = false;
+
+function _clearSoundtrackStack() {
+  if (_soundtrackStack) _soundtrackStack.innerHTML = '';
+}
+window.clearSoundtrackStack = _clearSoundtrackStack;
+
+async function _searchTracksForMood(token, query, limit = 5) {
+  const resp = await fetch(
+    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.tracks?.items || [];
+}
+
+async function _fetchRecommendations(token, moodId) {
+  const cfg = _MOOD_SOUNDTRACK[moodId];
+  if (!cfg) return [];
+
+  const params = new URLSearchParams({
+    limit: '5',
+    seed_genres: cfg.genres.slice(0, 3).join(','),
+    target_energy: String(cfg.target_energy),
+    target_valence: String(cfg.target_valence),
+    target_tempo: String(cfg.target_tempo),
+  });
+
+  try {
+    const resp = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.tracks || [];
+  } catch {
+    return [];
+  }
+}
+
+async function _generateSoundtrack() {
+  if (_soundtrackLoading) return;
+  const moodId = typeof window.getActiveMood === 'function' ? window.getActiveMood() : null;
+  if (!moodId) {
+    _showControlFeedback('Select a mood card first', true);
+    return;
+  }
+  if (!window.spotifyState.connected) {
+    const hintEl = document.getElementById('moodLibraryHint');
+    if (hintEl) hintEl.textContent = 'Connect Spotify in capsule to generate soundtrack';
+    return;
+  }
+
+  _soundtrackLoading = true;
+  if (_generateSoundtrackBtn) {
+    _generateSoundtrackBtn.disabled = true;
+    _generateSoundtrackBtn.textContent = 'Generating…';
+  }
+  _clearSoundtrackStack();
+
+  try {
+    const token = await _getToken();
+    const cfg = _MOOD_SOUNDTRACK[moodId];
+    const [recTracks, ...searchBatches] = await Promise.all([
+      _fetchRecommendations(token, moodId),
+      ...cfg.searches.map((q) => _searchTracksForMood(token, q, 3)),
+    ]);
+
+    const seen = new Set();
+    const merged = [];
+    for (const track of [...recTracks, ...searchBatches.flat()]) {
+      if (!track?.id || seen.has(track.id)) continue;
+      seen.add(track.id);
+      merged.push(track);
+      if (merged.length >= 5) break;
+    }
+
+    if (merged.length < 3) {
+      const fallback = await _searchTracksForMood(token, `${moodId} mood music`, 5);
+      for (const track of fallback) {
+        if (!track?.id || seen.has(track.id)) continue;
+        seen.add(track.id);
+        merged.push(track);
+        if (merged.length >= 5) break;
+      }
+    }
+
+    _renderSoundtrackStack(merged.slice(0, 5), moodId);
+    if (!merged.length) {
+      _showControlFeedback('No tracks found — try another mood', true);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] soundtrack error:', err.message);
+    _showControlFeedback('Could not generate soundtrack', true);
+  } finally {
+    _soundtrackLoading = false;
+    if (_generateSoundtrackBtn) {
+      _generateSoundtrackBtn.disabled = false;
+      _generateSoundtrackBtn.textContent = 'Generate soundtrack';
+    }
+  }
+}
+
+function _renderSoundtrackStack(tracks, lockedMood) {
+  if (!_soundtrackStack) return;
+  _soundtrackStack.innerHTML = '';
+
+  tracks.forEach((track, index) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'soundtrack-card';
+    card.style.setProperty('--stack-index', String(index));
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('aria-label', `Play ${track.name} by ${track.artists.map((a) => a.name).join(', ')}`);
+
+    const art = track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || '';
+    card.innerHTML = `
+      <img class="soundtrack-art" src="${art}" alt="" width="36" height="36">
+      <span class="soundtrack-meta">
+        <span class="soundtrack-track">${track.name}</span>
+        <span class="soundtrack-artist">${track.artists.map((a) => a.name).join(', ')}</span>
+      </span>
+      <svg class="soundtrack-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    `;
+
+    card.addEventListener('click', async () => {
+      await _playTrackUri(track.uri, track.name, { keepSearch: true });
+      if (typeof window.applyMoodVisuals === 'function') {
+        window.applyMoodVisuals(lockedMood, 850);
+      }
+      if (typeof window.setMoodConfidence === 'function') {
+        const features = await _deriveFeatures(await _getToken(), track);
+        const score = _scoreMood(features, lockedMood);
+        window.setMoodConfidence(Math.round(42 + score * 54));
+      }
+    });
+
+    _soundtrackStack.appendChild(card);
+  });
+}
+
+if (_generateSoundtrackBtn) {
+  _generateSoundtrackBtn.addEventListener('click', _generateSoundtrack);
+}
+
+// ─── Music capsule expand / collapse ───
+const _musicCapsule = document.getElementById('musicCapsule');
+const _capsuleCollapsed = document.getElementById('capsuleCollapsed');
+let _capsuleCollapseTimer = null;
+
+function _expandCapsule() {
+  if (!_musicCapsule) return;
+  _musicCapsule.classList.add('is-expanded');
+  const expanded = document.getElementById('capsuleExpanded');
+  if (expanded) expanded.hidden = false;
+  _resetCapsuleCollapseTimer();
+}
+
+function _collapseCapsule() {
+  if (!_musicCapsule) return;
+  _musicCapsule.classList.remove('is-expanded');
+  const expanded = document.getElementById('capsuleExpanded');
+  if (expanded) expanded.hidden = true;
+}
+
+function _resetCapsuleCollapseTimer() {
+  clearTimeout(_capsuleCollapseTimer);
+  _capsuleCollapseTimer = setTimeout(_collapseCapsule, 8000);
+}
+
+if (_musicCapsule) {
+  _musicCapsule.addEventListener('mouseenter', _expandCapsule);
+  _musicCapsule.addEventListener('focusin', _expandCapsule);
+  _musicCapsule.addEventListener('mouseleave', () => {
+    if (!_isPlaying) _collapseCapsule();
+    else _resetCapsuleCollapseTimer();
+  });
+  _musicCapsule.addEventListener('click', (e) => {
+    if (e.target.closest('.player-btn, .capsule-search-input, .spotify-connect-btn, .capsule-disconnect, .search-results')) return;
+    _expandCapsule();
+  });
+}
+
+if (_capsuleCollapsed) {
+  _capsuleCollapsed.addEventListener('click', (e) => {
+    if (e.target.closest('.play-pause')) return;
+    _expandCapsule();
   });
 }
 
