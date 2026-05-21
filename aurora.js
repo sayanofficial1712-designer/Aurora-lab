@@ -832,21 +832,20 @@ function render() {
     console.error('[Aurora] WebGL error after draw:', glErr);
   }
 
-  if (AURORA_DEBUG && new URLSearchParams(window.location.search).has('debug')) {
-    if (_renderFrame % 120 === 0) {
-      console.log('[Aurora] render frame', _renderFrame, {
-        time: elapsed.toFixed(2),
-        activeMood,
-        uniforms: { speed, distortion, intensity, blob: DEBUG_MULT.blob, warp: DEBUG_MULT.warp, flow: DEBUG_MULT.flow },
-        colors: colorSliders.map((el) => el?.value),
-        clearColor: rgbSnapshot[0],
-        canvas: `${canvas.width}×${canvas.height}`,
-      });
-    }
-    if (activeMood !== _lastLoggedMood) {
-      _lastLoggedMood = activeMood;
-      logShaderParams('active mood changed');
-    }
+  if (activeMood !== _lastLoggedMood) {
+    _lastLoggedMood = activeMood;
+    logShaderParams('active mood changed');
+  }
+
+  if (new URLSearchParams(window.location.search).has('debug') && _renderFrame % 120 === 0) {
+    console.log('[Aurora] render frame', _renderFrame, {
+      time: elapsed.toFixed(2),
+      activeMood,
+      uniforms: { speed, distortion, intensity, blob: DEBUG_MULT.blob, warp: DEBUG_MULT.warp, flow: DEBUG_MULT.flow },
+      colors: colorSliders.map((el) => el?.value),
+      clearColor: rgbSnapshot[0],
+      canvas: `${canvas.width}×${canvas.height}`,
+    });
   }
 
   requestAnimationFrame(render);
