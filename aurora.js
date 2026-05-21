@@ -88,17 +88,29 @@ const fragmentShaderSource = `
     vec2 pos = uv;
     pos.x *= aspect;
 
-    float t = time * speed;
+    float t = time * speed * 1.25;
 
-    float n1 = snoise(pos * 1.5 + t * 0.8);
-    float n2 = snoise(pos * 1.0 - t * 0.6 + 10.0);
-    float n3 = snoise(pos * 2.0 + t * 0.5 + 20.0);
-    float n4 = snoise(pos * 1.2 + t * 0.7 + 30.0);
+    // Large atmospheric blobs — low frequency = bigger shapes
+    float blobA = snoise(pos * 0.36 + vec2(t * 0.78, t * 0.52));
+    float blobB = snoise(pos * 0.30 - vec2(t * 0.62, t * 0.48) + 9.0);
+    float blobC = snoise(pos * 0.44 + t * 0.55 + 21.0);
+    float blobD = snoise(pos * 0.26 + t * 0.38 + 33.0);
+
+    // Sharpen blob contrast for visible color masses
+    float massA = pow(abs(blobA) * 0.55 + 0.45, 1.35);
+    float massB = pow(abs(blobB) * 0.55 + 0.45, 1.28);
+    float massC = pow(abs(blobC) * 0.55 + 0.45, 1.22);
+
+    // Finer flow layers — faster drift
+    float n1 = snoise(pos * 1.2 + t * 1.35);
+    float n2 = snoise(pos * 0.88 - t * 1.08 + 10.0);
+    float n3 = snoise(pos * 1.65 + t * 0.95 + 20.0);
+    float n4 = snoise(pos * 1.05 + t * 1.18 + 30.0);
 
     vec2 distort = vec2(
-      snoise(pos * 0.8 + t * 0.4),
-      snoise(pos * 0.8 - t * 0.35 + 5.0)
-    ) * distortionAmount;
+      snoise(pos * 0.65 + t * 0.88),
+      snoise(pos * 0.65 - t * 0.76 + 5.0)
+    ) * distortionAmount * 1.75;
 
     vec2 mousePos = mouse;
     mousePos.x *= aspect;
@@ -109,19 +121,33 @@ const fragmentShaderSource = `
 
     vec2 p = pos + distort;
 
-    float blend1 = smoothstep(-0.5, 0.5, n1 + p.x - 0.5);
-    float blend2 = smoothstep(-0.5, 0.5, n2 + p.y - 0.5);
-    float blend3 = smoothstep(-0.5, 0.5, n3);
-    float blend4 = smoothstep(-0.4, 0.6, n4);
+    // Blob-driven blends — stronger, more saturated masses
+    float blend1 = smoothstep(-0.08, 0.68, n1 + massA * 0.92 + blobD * 0.35 + p.x - 0.38);
+    float blend2 = smoothstep(-0.10, 0.64, n2 + massB * 0.88 + p.y - 0.44);
+    float blend3 = smoothstep(-0.14, 0.60, n3 + massC * 0.78);
+    float blend4 = smoothstep(-0.06, 0.72, n4 + massA * 0.48);
 
     vec3 color = color1;
     color = mix(color, color2, blend1);
-    color = mix(color, color3, blend2 * 0.8);
-    color = mix(color, color4, (1.0 - blend1) * blend2 * 0.7);
-    color = mix(color, color5, blend3 * 0.5);
-    color = mix(color, color1, blend4 * (1.0 - blend3) * 0.4);
+    color = mix(color, color3, blend2 * 0.96);
+    color = mix(color, color4, (1.0 - blend1) * blend2 * 0.94);
+    color = mix(color, color5, blend3 * 0.88);
+    color = mix(color, color1, blend4 * (1.0 - blend3) * 0.72);
 
-    float soft = snoise(p * 2.0 + t * 0.05) * 0.04;
+    // Dreamy center glow
+    vec2 center = vec2(aspect * 0.5, 0.50);
+    float radial = 1.0 - smoothstep(0.02, 0.88, length(p - center));
+    color = mix(color * 0.88, color * 1.18, radial * 0.52);
+
+    // Blob luminance peaks
+    float highlight = massA * massB * 0.14 + massC * 0.06;
+    color += highlight;
+
+    // Dreamy pastel wash — lilac blush lift (background only)
+    vec3 dreamyWash = vec3(0.98, 0.90, 0.99);
+    color = mix(color, color * dreamyWash + vec3(0.04, 0.02, 0.06), 0.22);
+
+    float soft = snoise(p * 2.0 + t * 0.18) * 0.065;
     color += soft;
 
     vec3 warmTint = vec3(0.22, 0.06, -0.18);
@@ -131,7 +157,7 @@ const fragmentShaderSource = `
     color *= 1.0 + warmCoolShift * 0.12;
 
     float gray = dot(color, vec3(0.299, 0.587, 0.114));
-    float satFinal = clamp(intensity + saturationBoost, 0.25, 1.7);
+    float satFinal = clamp(intensity + saturationBoost + 0.08, 0.42, 1.92);
     color = mix(vec3(gray), color, satFinal);
     color = clamp(color, 0.0, 1.0);
 
@@ -252,7 +278,7 @@ const sliderValueLabels = {
   intensity: document.getElementById('intensityValue'),
 };
 
-const DEFAULT_SLIDERS = { speed: 28, mouse: 0, intensity: 42, distortion: 36 };
+const DEFAULT_SLIDERS = { speed: 38, mouse: 0, intensity: 48, distortion: 44 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -544,7 +570,18 @@ function updateShareURL() {
 buildMoodVault();
 loadFromURL();
 if (!activeMood && !window.location.search) {
-  setSliders(DEFAULT_SLIDERS);
+  const dreamy = MOODS.dreamy;
+  if (dreamy) {
+    setColors(dreamy.colors);
+    setSliders({
+      speed: dreamy.speed + 10,
+      mouse: dreamy.mouse,
+      intensity: dreamy.intensity + 6,
+      distortion: dreamy.distortion + 10,
+    });
+  } else {
+    setSliders(DEFAULT_SLIDERS);
+  }
   setActiveMood('dreamy');
   if (moodLibraryHint) moodLibraryHint.textContent = MOODS.dreamy.descriptor;
 }
@@ -664,13 +701,13 @@ function render() {
   }
 
   const elapsed = (Date.now() - startTime) / 1000;
-  const scaleValue = (input) => (Number(input?.value || 28) - 10) / 40;
-  const speed = 0.08 + scaleValue(speedSlider) * 0.62;
+  const scaleValue = (input) => (Number(input?.value || 38) - 10) / 40;
+  const speed = 0.20 + scaleValue(speedSlider) * 1.08;
   const mouseStrength = 0;
-  const intensity = 0.7 + scaleValue(intensitySlider) * 0.8;
-  const distortion = 0.08 + scaleValue(distortionSlider) * 0.65;
+  const intensity = 0.90 + scaleValue(intensitySlider) * 1.05;
+  const distortion = 0.24 + scaleValue(distortionSlider) * 1.08;
 
-  gl.clearColor(0.96, 0.96, 0.95, 1.0);
+  gl.clearColor(0.94, 0.86, 0.98, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.useProgram(program);

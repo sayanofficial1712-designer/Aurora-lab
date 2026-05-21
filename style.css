@@ -29,11 +29,15 @@ html, body {
   overflow: hidden;
   font-family: var(--font);
   color: var(--text-primary);
-  background: #e8e4f0;
+  background: #e8d4f8;
 }
 
 body.webgl-fallback {
-  background: linear-gradient(160deg, #f5c8f6 0%, #dcceff 35%, #cfe9ff 70%, #e8d4f8 100%);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245, 200, 246, 0.85) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 20% 70%, rgba(207, 233, 255, 0.75) 0%, transparent 50%),
+    radial-gradient(ellipse 65% 50% at 80% 65%, rgba(220, 206, 255, 0.7) 0%, transparent 48%),
+    linear-gradient(160deg, #e8d4f8 0%, #dcceff 40%, #cfe9ff 75%, #f5c8f6 100%);
 }
 
 button, input, select, textarea { font-family: inherit; }
