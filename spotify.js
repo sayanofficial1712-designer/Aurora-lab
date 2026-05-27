@@ -828,11 +828,11 @@ function _announceMood(mood, track, confidence = 0) {
   const moodData = window.AuroraMoods.MOODS[libMood];
   const hintEl = document.getElementById('moodLibraryHint');
 
-  if (typeof window.updateCenterStage === 'function') {
+  if (typeof window.updateCenterStage === 'function' && !window._auroraManualLock) {
     window.updateCenterStage(libMood);
   }
 
-  if (typeof window.setMoodConfidence === 'function') {
+  if (typeof window.setMoodConfidence === 'function' && !window._auroraManualLock) {
     window.setMoodConfidence(confidence);
   }
 
@@ -980,8 +980,8 @@ if (_progressTrack) {
   });
 }
 
-window._auroraAutoMode = true;
-window._auroraManualLock = false;
+if (typeof window._auroraAutoMode === 'undefined') window._auroraAutoMode = true;
+if (typeof window._auroraManualLock === 'undefined') window._auroraManualLock = false;
 
 window.refreshSpotifyMood = async function refreshSpotifyMood() {
   if (!window.spotifyState?.connected) return;

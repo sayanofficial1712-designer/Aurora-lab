@@ -328,7 +328,7 @@ function logPipelineAudit() {
 }
 
 function logShaderParams(source) {
-  const colors = colorSliders.map((el) => el?.value);
+  const colors = _shaderColors.slice();
   console.log(`[Aurora] shader params (${source})`, {
     activeMood: activeMood,
     colors,
@@ -342,9 +342,9 @@ function logShaderParams(source) {
 }
 
 function washStrengthForMood(moodId) {
-  if (moodId === 'dreamy') return AURORA_DEBUG ? 0.28 : 0.18;
+  if (moodId === 'dreamy') return AURORA_DEBUG ? 0.22 : 0.10;
   if (moodId === 'midnight' || moodId === 'locked_in') return 0;
-  return 0.06;
+  return 0.04;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -362,8 +362,12 @@ function lerpHex(a, b, t) {
   return '#' + [r, g, bl].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
+window._auroraAutoMode = window._auroraAutoMode !== false;
+window._auroraManualLock = window._auroraManualLock === true;
+
 let activeMood = null;
 let moodConfidence = 0;
+let _shaderColors = ['#E8D4F8', '#CFE9FF', '#F5C8F6', '#E2D9FA', '#D9E0FB'];
 
 function hexToRgb(hex) {
   const value = hex.replace('#', '');
@@ -383,8 +387,15 @@ function easeInOutCubic(t) {
 }
 
 function setColors(colors) {
+  _shaderColors = colors.slice(0, 5);
   colorSliders.forEach((input, i) => {
-    input.value = colors[i];
+    if (input && colors[i]) input.value = colors[i];
+  });
+}
+
+function syncShaderColorsFromInputs() {
+  colorSliders.forEach((input, i) => {
+    if (input?.value) _shaderColors[i] = input.value;
   });
 }
 
@@ -417,7 +428,7 @@ function setActiveMood(moodId) {
   });
   updateCenterStage(libId);
   if (moodLibraryHint && !window.spotifyState?.connected && window._auroraAutoMode !== false) {
-    moodLibraryHint.textContent = mood.descriptor;
+    moodLibraryHint.textContent = MOODS[libId]?.descriptor || '';
   }
 }
 
@@ -458,8 +469,12 @@ function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
     if (npMood) npMood.hidden = true;
   }
 
-  applyMoodVisuals(libId, duration);
-  if (lock) updateLockMoodUI();
+  if (lock) {
+    applyMoodImmediate(libId);
+    updateLockMoodUI();
+  } else {
+    applyMoodVisuals(libId, duration);
+  }
 }
 
 function canAutoMoodDriveVisuals() {
@@ -495,17 +510,23 @@ function buildMoodVault() {
     `;
 
     card.addEventListener('mouseenter', () => {
-      if (window._auroraManualLock) return;
-      applyMoodVisuals(moodId, 600);
+      applyMoodVisuals(moodId, 450, { preview: true });
     });
 
     card.addEventListener('click', (e) => {
       e.preventDefault();
-      selectMoodCard(moodId, { lock: true, duration: 850 });
+      selectMoodCard(moodId, { lock: true });
+      card.classList.add('is-picked');
+      setTimeout(() => card.classList.remove('is-picked'), 420);
       if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
     });
 
     moodVaultTrack.appendChild(card);
+  });
+
+  moodVaultTrack.addEventListener('mouseleave', () => {
+    if (!activeMood) return;
+    applyMoodImmediate(activeMood, { updateActive: false });
   });
 }
 
@@ -544,35 +565,62 @@ function updateLockMoodUI() {
 
 let _transitionToken = 0;
 
-function transitionToMood(moodId, duration = 850) {
+function applyMoodImmediate(moodId, { updateActive = true } = {}) {
   const libId = toLibraryMood(moodId);
   const mood = MOODS[libId];
   if (!mood) return;
 
+  _transitionToken += 1;
+  setColors(mood.colors);
+  setSliders({
+    speed: mood.speed,
+    mouse: mood.mouse,
+    intensity: mood.intensity,
+    distortion: mood.distortion,
+  });
+  if (updateActive) {
+    setActiveMood(libId);
+    updateLockMoodUI();
+    updateShareURL();
+  }
+  updateMoodGlow(libId, mood.colors);
+  _lastLoggedMood = null;
+  logShaderParams(`immediate → ${libId}`);
+}
+
+function transitionToMood(moodId, duration = 850, { preview = false } = {}) {
+  const libId = toLibraryMood(moodId);
+  const mood = MOODS[libId];
+  if (!mood) return;
+
+  if (duration <= 0) {
+    applyMoodImmediate(libId, { updateActive: !preview });
+    return;
+  }
+
   const validColors = colorSliders.filter(Boolean);
   if (!validColors.length || !speedSlider || !intensitySlider || !distortionSlider) {
     console.warn('[Aurora] Sliders missing — applying mood immediately');
-    setColors(mood.colors);
-    setSliders({ speed: mood.speed, mouse: mood.mouse, intensity: mood.intensity, distortion: mood.distortion });
-    setActiveMood(libId);
-    updateMoodGlow(libId, mood.colors);
-    updateShareURL();
+    applyMoodImmediate(libId, { updateActive: !preview });
     return;
   }
 
   const myToken = ++_transitionToken;
-  setActiveMood(libId);
-  updateLockMoodUI();
+  if (!preview) {
+    setActiveMood(libId);
+    updateLockMoodUI();
+  }
   _lastLoggedMood = null;
 
   console.log('[Aurora] mood → render', {
     moodId: libId,
     label: mood.label,
+    preview,
     targetColors: mood.colors,
     targetSliders: { speed: mood.speed, intensity: mood.intensity, distortion: mood.distortion },
   });
 
-  const startColors = colorSliders.map((i) => i?.value || mood.colors[0]);
+  const startColors = _shaderColors.slice();
   const startGlow = startColors.slice(0, 3);
   const endGlow = mood.colors.slice(0, 3);
   const startVals = {
@@ -594,9 +642,10 @@ function transitionToMood(moodId, duration = 850) {
     const raw = Math.min(1, (performance.now() - start) / duration);
     const t = easeInOutCubic(raw);
 
+    _shaderColors = mood.colors.map((target, i) => lerpHex(startColors[i], target, t));
     colorSliders.forEach((input, i) => {
       if (!input) return;
-      input.value = lerpHex(startColors[i], mood.colors[i], t);
+      input.value = _shaderColors[i];
     });
     speedSlider.value = Math.round(lerp(startVals.speed, endVals.speed, t));
     mouseInfluenceSlider.value = Math.round(lerp(startVals.mouse, endVals.mouse, t));
@@ -612,16 +661,17 @@ function transitionToMood(moodId, duration = 850) {
 
     if (raw < 1) requestAnimationFrame(tick);
     else {
+      _shaderColors = mood.colors.slice(0, 5);
       updateMoodGlow(libId, mood.colors);
-      updateShareURL();
-      logShaderParams(`transition complete → ${libId}`);
+      if (!preview) updateShareURL();
+      logShaderParams(`transition complete → ${libId}${preview ? ' (preview)' : ''}`);
     }
   }
   tick();
 }
 
-function applyMoodVisuals(moodId, duration = 850) {
-  transitionToMood(toLibraryMood(moodId), duration);
+function applyMoodVisuals(moodId, duration = 850, opts = {}) {
+  transitionToMood(toLibraryMood(moodId), duration, opts);
 }
 
 function resetPalette() {
@@ -630,6 +680,7 @@ function resetPalette() {
 
 window.transitionToMood = (moodId, duration = 850) => applyMoodVisuals(moodId, duration);
 window.applyMoodVisuals = applyMoodVisuals;
+window.applyMoodImmediate = applyMoodImmediate;
 window.getActiveMood = () => activeMood;
 window.updateLockMoodUI = updateLockMoodUI;
 window.updateCenterStage = updateCenterStage;
@@ -647,6 +698,7 @@ function loadFromURL() {
       const fromURL = params.get(`c${i + 1}`);
       if (fromURL && isValidHexColor(fromURL)) input.value = `#${fromURL}`;
     });
+    syncShaderColorsFromInputs();
   }
 
   if (moodParam && MOODS[moodParam]) {
@@ -680,139 +732,147 @@ function updateShareURL() {
   return url;
 }
 
-buildMoodVault();
-loadFromURL();
-if (!activeMood && !window.location.search) {
-  const dreamy = MOODS.dreamy;
-  if (dreamy) {
-    setColors(dreamy.colors);
-    setSliders({
-      speed: dreamy.speed,
-      mouse: dreamy.mouse,
-      intensity: dreamy.intensity,
-      distortion: dreamy.distortion,
+function bootAuroraUI() {
+  buildMoodVault();
+  loadFromURL();
+  if (!activeMood && !window.location.search) {
+    const dreamy = MOODS.dreamy;
+    if (dreamy) {
+      setColors(dreamy.colors);
+      setSliders({
+        speed: dreamy.speed,
+        mouse: dreamy.mouse,
+        intensity: dreamy.intensity,
+        distortion: dreamy.distortion,
+      });
+    } else {
+      setSliders(DEFAULT_SLIDERS);
+    }
+    setActiveMood('dreamy');
+    if (moodLibraryHint) moodLibraryHint.textContent = MOODS.dreamy.descriptor;
+  }
+  updateSliderLabels();
+
+  if (modeAutoBtn) {
+    modeAutoBtn.addEventListener('click', () => {
+      window._auroraAutoMode = true;
+      window._auroraManualLock = false;
+      modeAutoBtn.classList.add('active');
+      modeLockBtn.classList.remove('active');
+      if (moodLibraryHint) moodLibraryHint.textContent = 'Spotify will guide your mood';
+      updateLockMoodUI();
+      if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
+      if (window.spotifyState?.connected && typeof window.refreshSpotifyMood === 'function') {
+        window.refreshSpotifyMood();
+      }
     });
-  } else {
-    setSliders(DEFAULT_SLIDERS);
   }
-  setActiveMood('dreamy');
-  if (moodLibraryHint) moodLibraryHint.textContent = MOODS.dreamy.descriptor;
-}
-updateSliderLabels();
 
-if (modeAutoBtn) {
-  modeAutoBtn.addEventListener('click', () => {
-    window._auroraAutoMode = true;
-    window._auroraManualLock = false;
-    modeAutoBtn.classList.add('active');
-    modeLockBtn.classList.remove('active');
-    if (moodLibraryHint) moodLibraryHint.textContent = 'Spotify will guide your mood';
-    updateLockMoodUI();
-    if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
-    if (window.spotifyState?.connected && typeof window.refreshSpotifyMood === 'function') {
-      window.refreshSpotifyMood();
+  if (modeLockBtn) {
+    modeLockBtn.addEventListener('click', () => {
+      window._auroraAutoMode = false;
+      window._auroraManualLock = true;
+      modeLockBtn.classList.add('active');
+      modeAutoBtn.classList.remove('active');
+      updateLockMoodUI();
+      if (activeMood && moodLibraryHint) {
+        moodLibraryHint.textContent = MOODS[activeMood]?.descriptor || 'Pick a cartridge to lock';
+      } else if (moodLibraryHint) {
+        moodLibraryHint.textContent = 'Pick a cartridge to lock mood';
+      }
+    });
+  }
+
+  if (controlsToggle) {
+    controlsToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openControls();
+    });
+  }
+  if (controlsCloseBtn) controlsCloseBtn.addEventListener('click', closeControls);
+
+  document.addEventListener('click', (e) => {
+    if (!controlsPanelWrap?.classList.contains('is-open')) return;
+    if (controlsPanelWrap.contains(e.target)) return;
+    closeControls();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeControls();
+  });
+
+  window.setMoodConfidence = setMoodConfidence;
+  window.toLibraryMood = toLibraryMood;
+  window.LIBRARY_MOODS = LIBRARY_MOODS;
+  window.AuroraMOODS = MOODS;
+
+  colorSliders.forEach((input) => {
+    input.addEventListener('input', () => {
+      syncShaderColorsFromInputs();
+      if (activeMood) clearActiveMood();
+      updateShareURL();
+    });
+  });
+
+  [speedSlider, mouseInfluenceSlider, intensitySlider, distortionSlider].forEach((slider) => {
+    slider.addEventListener('input', () => {
+      if (activeMood) clearActiveMood();
+      updateSliderLabels();
+      updateShareURL();
+    });
+  });
+
+  if (resetBtn) resetBtn.addEventListener('click', resetPalette);
+
+  if (shareBtn) shareBtn.addEventListener('click', async () => {
+    const url = updateShareURL();
+    try {
+      await navigator.clipboard.writeText(url);
+      shareBtn.textContent = 'Link copied!';
+      shareBtn.classList.add('copied');
+      setTimeout(() => {
+        shareBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 14a5 5 0 0 1 0-7l3-3a5 5 0 0 1 7 7l-1.5 1.5M14 10a5 5 0 0 1 0 7l-3 3a5 5 0 0 1-7-7l1.5-1.5" stroke-linecap="round"/></svg> Copy mood link`;
+        shareBtn.classList.remove('copied');
+      }, 2000);
+    } catch {
+      shareBtn.textContent = 'Copy failed';
+      setTimeout(() => { shareBtn.textContent = 'Copy mood link'; }, 2000);
     }
   });
-}
 
-if (modeLockBtn) {
-  modeLockBtn.addEventListener('click', () => {
-    window._auroraAutoMode = false;
-    window._auroraManualLock = true;
-    modeLockBtn.classList.add('active');
-    modeAutoBtn.classList.remove('active');
-    updateLockMoodUI();
-    if (activeMood && moodLibraryHint) {
-      moodLibraryHint.textContent = MOODS[activeMood]?.descriptor || 'Pick a cartridge to lock';
-    } else if (moodLibraryHint) {
-      moodLibraryHint.textContent = 'Pick a cartridge to lock mood';
+  if (exportBtn) exportBtn.addEventListener('click', () => {
+    const original = exportBtn.innerHTML;
+    try {
+      const link = document.createElement('a');
+      link.download = `aurora-${activeMood || 'mood'}-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      exportBtn.textContent = 'Saved!';
+      setTimeout(() => { exportBtn.innerHTML = original; }, 2000);
+    } catch {
+      exportBtn.textContent = 'Export failed';
+      setTimeout(() => { exportBtn.innerHTML = original; }, 2000);
     }
   });
+
+  const brandBtn = document.getElementById('brandBtn');
+  if (brandBtn) brandBtn.addEventListener('click', () => applyMoodVisuals('dreamy', 900));
+
+  if (gl && program) logPipelineAudit();
 }
 
-if (controlsToggle) {
-  controlsToggle.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openControls();
-  });
+try {
+  bootAuroraUI();
+} catch (err) {
+  console.error('[Aurora] UI boot failed — atmosphere will still render', err);
 }
-if (controlsCloseBtn) controlsCloseBtn.addEventListener('click', closeControls);
-
-document.addEventListener('click', (e) => {
-  if (!controlsPanelWrap?.classList.contains('is-open')) return;
-  if (controlsPanelWrap.contains(e.target)) return;
-  closeControls();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeControls();
-});
-
-window.setMoodConfidence = setMoodConfidence;
-window.toLibraryMood = toLibraryMood;
-window.LIBRARY_MOODS = LIBRARY_MOODS;
-window.AuroraMOODS = MOODS;
-
-colorSliders.forEach((input) => {
-  input.addEventListener('input', () => {
-    if (activeMood) clearActiveMood();
-    updateShareURL();
-  });
-});
-
-[speedSlider, mouseInfluenceSlider, intensitySlider, distortionSlider].forEach((slider) => {
-  slider.addEventListener('input', () => {
-    if (activeMood) clearActiveMood();
-    updateSliderLabels();
-    updateShareURL();
-  });
-});
-
-if (resetBtn) resetBtn.addEventListener('click', resetPalette);
-
-if (shareBtn) shareBtn.addEventListener('click', async () => {
-  const url = updateShareURL();
-  try {
-    await navigator.clipboard.writeText(url);
-    shareBtn.textContent = 'Link copied!';
-    shareBtn.classList.add('copied');
-    setTimeout(() => {
-      shareBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 14a5 5 0 0 1 0-7l3-3a5 5 0 0 1 7 7l-1.5 1.5M14 10a5 5 0 0 1 0 7l-3 3a5 5 0 0 1-7-7l1.5-1.5" stroke-linecap="round"/></svg> Copy mood link`;
-      shareBtn.classList.remove('copied');
-    }, 2000);
-  } catch {
-    shareBtn.textContent = 'Copy failed';
-    setTimeout(() => { shareBtn.textContent = 'Copy mood link'; }, 2000);
-  }
-});
-
-if (exportBtn) exportBtn.addEventListener('click', () => {
-  const original = exportBtn.innerHTML;
-  try {
-    const link = document.createElement('a');
-    link.download = `aurora-${activeMood || 'mood'}-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    exportBtn.textContent = 'Saved!';
-    setTimeout(() => { exportBtn.innerHTML = original; }, 2000);
-  } catch {
-    exportBtn.textContent = 'Export failed';
-    setTimeout(() => { exportBtn.innerHTML = original; }, 2000);
-  }
-});
-
-const brandBtn = document.getElementById('brandBtn');
-if (brandBtn) brandBtn.addEventListener('click', () => applyMoodVisuals('dreamy', 900));
-
-updateSliderLabels();
-if (gl && program) logPipelineAudit();
 
 let startTime = Date.now();
 const mouse = { x: 0.5, y: 0.5 };
 
 function readClearColorFromSliders() {
-  const [r, g, b] = hexToRgb(colorSliders[0]?.value || '#E8D4F8');
+  const [r, g, b] = hexToRgb(_shaderColors[0] || '#E8D4F8');
   return [r, g, b, 1.0];
 }
 
@@ -860,14 +920,18 @@ function render() {
 
   const colorLocations = [color1Location, color2Location, color3Location, color4Location, color5Location];
   const rgbSnapshot = [];
-  colorSliders.forEach((input, i) => {
-    if (!input || !colorLocations[i]) return;
-    const [r, g, b] = hexToRgb(input.value);
+  _shaderColors.forEach((hex, i) => {
+    if (!colorLocations[i]) return;
+    const [r, g, b] = hexToRgb(hex);
     rgbSnapshot.push([r, g, b]);
     gl.uniform3f(colorLocations[i], r, g, b);
   });
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  if (_renderFrame === 1) {
+    document.body.classList.add('webgl-ready');
+  }
 
   const glErr = gl.getError();
   if (glErr !== gl.NO_ERROR && AURORA_DEBUG) {
@@ -884,7 +948,7 @@ function render() {
       time: elapsed.toFixed(2),
       activeMood,
       uniforms: { speed, distortion, intensity, blob: DEBUG_MULT.blob, warp: DEBUG_MULT.warp, flow: DEBUG_MULT.flow },
-      colors: colorSliders.map((el) => el?.value),
+      colors: _shaderColors.slice(),
       clearColor: rgbSnapshot[0],
       canvas: `${canvas.width}×${canvas.height}`,
     });
@@ -896,7 +960,9 @@ function render() {
 window.AuroraDebug = {
   getFrame: () => _renderFrame,
   getActiveMood: () => activeMood,
-  getColors: () => colorSliders.map((el) => el?.value),
+  getColors: () => _shaderColors.slice(),
+  getManualLock: () => window._auroraManualLock,
+  getAutoMode: () => window._auroraAutoMode,
   getSliders: () => ({
     flow: distortionSlider?.value,
     blur: speedSlider?.value,

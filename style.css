@@ -32,7 +32,15 @@ html, body {
   background: #e8d4f8;
 }
 
-body:not(.webgl-fallback) {
+body:not(.webgl-fallback):not(.webgl-ready) {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245, 200, 246, 0.85) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 20% 70%, rgba(207, 233, 255, 0.75) 0%, transparent 50%),
+    radial-gradient(ellipse 65% 50% at 80% 65%, rgba(220, 206, 255, 0.7) 0%, transparent 48%),
+    linear-gradient(160deg, #e8d4f8 0%, #dcceff 40%, #cfe9ff 75%, #f5c8f6 100%);
+}
+
+body.webgl-ready:not(.webgl-fallback) {
   background: transparent;
 }
 
@@ -282,6 +290,16 @@ button, input, select, textarea { font-family: inherit; }
     transform 0.55s cubic-bezier(0.34, 1.2, 0.48, 1),
     filter 0.5s ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.mood-cartridge.is-picked {
+  animation: cartridge-pick 0.42s ease;
+}
+
+@keyframes cartridge-pick {
+  0% { transform: translateY(-8px) scale(1); }
+  40% { transform: translateY(-14px) scale(1.06); }
+  100% { transform: translateY(-8px) scale(1); }
 }
 
 .mood-cartridge:hover {
