@@ -611,7 +611,9 @@ async function _loadTrackAndApplyMood(token, track) {
     moodScores: features._moodScores,
   });
 
-  const autoOn = window._auroraAutoMode !== false;
+  const autoOn = typeof window.canAutoMoodDriveVisuals === 'function'
+    ? window.canAutoMoodDriveVisuals()
+    : window._auroraAutoMode !== false && !window._auroraManualLock;
   if (autoOn && typeof window.transitionToMood === 'function') {
     window.transitionToMood(libMood, 900);
   }
@@ -980,6 +982,20 @@ if (_progressTrack) {
 
 window._auroraAutoMode = true;
 window._auroraManualLock = false;
+
+window.refreshSpotifyMood = async function refreshSpotifyMood() {
+  if (!window.spotifyState?.connected) return;
+  try {
+    const token = await _getToken();
+    const data = await _fetchCurrentTrack(token);
+    if (data?.item) {
+      _lastTrackId = null;
+      await _loadTrackAndApplyMood(token, data.item);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] refresh mood failed:', err.message);
+  }
+};
 
 // ─────────────────────────────────────────────────────────────
 // Lock mood → soundtrack recommendations

@@ -441,6 +441,34 @@ function clearActiveMood() {
   if (moodLibraryHint) moodLibraryHint.textContent = 'Hover to preview · Click to lock mood';
 }
 
+function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
+  const libId = toLibraryMood(moodId);
+  const mood = MOODS[libId];
+  if (!mood) {
+    console.warn('[Aurora] Unknown mood card:', moodId);
+    return;
+  }
+
+  if (lock) {
+    window._auroraManualLock = true;
+    window._auroraAutoMode = false;
+    if (modeLockBtn) modeLockBtn.classList.add('active');
+    if (modeAutoBtn) modeAutoBtn.classList.remove('active');
+    setMoodConfidence(0);
+    if (npMood) npMood.hidden = true;
+  }
+
+  applyMoodVisuals(libId, duration);
+  if (lock) updateLockMoodUI();
+}
+
+function canAutoMoodDriveVisuals() {
+  return window._auroraAutoMode !== false && !window._auroraManualLock;
+}
+
+window.selectMoodCard = selectMoodCard;
+window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
+
 function buildMoodVault() {
   if (!moodVaultTrack) return;
   moodVaultTrack.innerHTML = '';
@@ -467,17 +495,14 @@ function buildMoodVault() {
     `;
 
     card.addEventListener('mouseenter', () => {
+      if (window._auroraManualLock) return;
       applyMoodVisuals(moodId, 600);
     });
 
-    card.addEventListener('click', () => {
-      window._auroraManualLock = true;
-      window._auroraAutoMode = false;
-      if (modeLockBtn) modeLockBtn.classList.add('active');
-      if (modeAutoBtn) modeAutoBtn.classList.remove('active');
-      applyMoodVisuals(moodId, 850);
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      selectMoodCard(moodId, { lock: true, duration: 850 });
       if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
-      updateLockMoodUI();
     });
 
     moodVaultTrack.appendChild(card);
@@ -524,6 +549,17 @@ function transitionToMood(moodId, duration = 850) {
   const mood = MOODS[libId];
   if (!mood) return;
 
+  const validColors = colorSliders.filter(Boolean);
+  if (!validColors.length || !speedSlider || !intensitySlider || !distortionSlider) {
+    console.warn('[Aurora] Sliders missing — applying mood immediately');
+    setColors(mood.colors);
+    setSliders({ speed: mood.speed, mouse: mood.mouse, intensity: mood.intensity, distortion: mood.distortion });
+    setActiveMood(libId);
+    updateMoodGlow(libId, mood.colors);
+    updateShareURL();
+    return;
+  }
+
   const myToken = ++_transitionToken;
   setActiveMood(libId);
   updateLockMoodUI();
@@ -536,7 +572,7 @@ function transitionToMood(moodId, duration = 850) {
     targetSliders: { speed: mood.speed, intensity: mood.intensity, distortion: mood.distortion },
   });
 
-  const startColors = colorSliders.map((i) => i.value);
+  const startColors = colorSliders.map((i) => i?.value || mood.colors[0]);
   const startGlow = startColors.slice(0, 3);
   const endGlow = mood.colors.slice(0, 3);
   const startVals = {
@@ -559,6 +595,7 @@ function transitionToMood(moodId, duration = 850) {
     const t = easeInOutCubic(raw);
 
     colorSliders.forEach((input, i) => {
+      if (!input) return;
       input.value = lerpHex(startColors[i], mood.colors[i], t);
     });
     speedSlider.value = Math.round(lerp(startVals.speed, endVals.speed, t));
@@ -672,6 +709,9 @@ if (modeAutoBtn) {
     if (moodLibraryHint) moodLibraryHint.textContent = 'Spotify will guide your mood';
     updateLockMoodUI();
     if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
+    if (window.spotifyState?.connected && typeof window.refreshSpotifyMood === 'function') {
+      window.refreshSpotifyMood();
+    }
   });
 }
 
