@@ -92,13 +92,13 @@ const fragmentShaderSource = `
     vec2 pos = uv;
     pos.x *= aspect;
 
-    float t = time * speed * 1.25 * uFlowScale;
+    float t = time * speed * 0.55 * uFlowScale;
 
     float blobFreq = 0.36 / max(uBlobScale, 0.5);
-    float blobA = snoise(pos * blobFreq + vec2(t * 0.78, t * 0.52));
-    float blobB = snoise(pos * (blobFreq * 0.83) - vec2(t * 0.62, t * 0.48) + 9.0);
-    float blobC = snoise(pos * (blobFreq * 1.22) + t * 0.55 + 21.0);
-    float blobD = snoise(pos * (blobFreq * 0.72) + t * 0.38 + 33.0);
+    float blobA = snoise(pos * blobFreq + vec2(t * 0.42, t * 0.28));
+    float blobB = snoise(pos * (blobFreq * 0.83) - vec2(t * 0.34, t * 0.26) + 9.0);
+    float blobC = snoise(pos * (blobFreq * 1.22) + t * 0.30 + 21.0);
+    float blobD = snoise(pos * (blobFreq * 0.72) + t * 0.22 + 33.0);
 
     // Sharpen blob contrast for visible color masses
     float massA = pow(abs(blobA) * 0.55 + 0.45, 1.35);
@@ -106,10 +106,10 @@ const fragmentShaderSource = `
     float massC = pow(abs(blobC) * 0.55 + 0.45, 1.22);
 
     // Finer flow layers — faster drift
-    float n1 = snoise(pos * 1.2 + t * 1.35);
-    float n2 = snoise(pos * 0.88 - t * 1.08 + 10.0);
-    float n3 = snoise(pos * 1.65 + t * 0.95 + 20.0);
-    float n4 = snoise(pos * 1.05 + t * 1.18 + 30.0);
+    float n1 = snoise(pos * 1.2 + t * 0.72);
+    float n2 = snoise(pos * 0.88 - t * 0.58 + 10.0);
+    float n3 = snoise(pos * 1.65 + t * 0.52 + 20.0);
+    float n4 = snoise(pos * 1.05 + t * 0.65 + 30.0);
 
     vec2 distort = vec2(
       snoise(pos * 0.65 + t * 0.88),
@@ -290,11 +290,13 @@ const sliderValueLabels = {
   intensity: document.getElementById('intensityValue'),
 };
 
-const DEFAULT_SLIDERS = { speed: 38, mouse: 0, intensity: 48, distortion: 44 };
+const DEFAULT_SLIDERS = { speed: 24, mouse: 0, intensity: 48, distortion: 30 };
 
-/** Debug session — add ?debug=1 for per-frame logs. Multipliers always boosted until verified. */
-const AURORA_DEBUG = new URLSearchParams(window.location.search).has('debug') || true;
-const DEBUG_MULT = { flow: 2, blob: 2, warp: 3 };
+/** Add ?debug=1 for verbose logs and optional boost via ?debug=boost */
+const AURORA_DEBUG = new URLSearchParams(window.location.search).has('debug');
+const DEBUG_MULT = new URLSearchParams(window.location.search).has('debug') && window.location.search.includes('boost')
+  ? { flow: 2, blob: 2, warp: 3 }
+  : { flow: 1, blob: 1, warp: 1 };
 
 let _renderFrame = 0;
 let _lastLoggedMood = null;
@@ -648,10 +650,10 @@ if (!activeMood && !window.location.search) {
   if (dreamy) {
     setColors(dreamy.colors);
     setSliders({
-      speed: dreamy.speed + 10,
+      speed: dreamy.speed,
       mouse: dreamy.mouse,
-      intensity: dreamy.intensity + 6,
-      distortion: dreamy.distortion + 10,
+      intensity: dreamy.intensity,
+      distortion: dreamy.distortion,
     });
   } else {
     setSliders(DEFAULT_SLIDERS);
@@ -788,10 +790,10 @@ function render() {
   _renderFrame += 1;
   const elapsed = (Date.now() - startTime) / 1000;
   const scaleValue = (input) => (Number(input?.value || 38) - 10) / 40;
-  const speed = (0.20 + scaleValue(speedSlider) * 1.08);
+  const speed = 0.07 + scaleValue(speedSlider) * 0.42;
   const mouseStrength = 0;
   const intensity = 0.90 + scaleValue(intensitySlider) * 1.05;
-  const distortion = (0.24 + scaleValue(distortionSlider) * 1.08) * DEBUG_MULT.flow;
+  const distortion = (0.12 + scaleValue(distortionSlider) * 0.48) * DEBUG_MULT.flow;
 
   const [cr, cg, cb] = readClearColorFromSliders();
   gl.clearColor(cr, cg, cb, 1.0);
