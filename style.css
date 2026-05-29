@@ -239,53 +239,35 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-.cassette-vault {
-  width: 100%;
-  perspective: 900px;
-}
-
-.cassette-cover {
-  position: relative;
-  padding: 18px 24px 14px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 40px rgba(0, 0, 0, 0.06);
-}
-
-.cassette-cover::before {
-  content: '';
-  position: absolute;
-  inset: 8px 12px auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  pointer-events: none;
-}
-
-.cassette-track {
+.mood-card-row {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 10px;
-  min-height: 120px;
-  padding-top: 8px;
+  flex-wrap: nowrap;
+  gap: 14px;
+  width: 100%;
+  min-height: 130px;
+  padding: 4px 8px 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Cassette cartridges */
+.mood-card-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mood cassette cards */
 .mood-cartridge {
   position: relative;
   flex: 0 0 auto;
-  width: 72px;
-  height: 96px;
+  width: 96px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  transform: translateY(12px);
+  transform: translateY(8px);
   transition:
     transform 0.55s cubic-bezier(0.34, 1.2, 0.48, 1),
     filter 0.5s ease;
@@ -315,22 +297,29 @@ button, input, select, textarea { font-family: inherit; }
 
 .mood-cartridge-inner {
   width: 100%;
-  height: 100%;
-  border-radius: 10px 10px 8px 8px;
-  background: var(--glass-white);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(236, 236, 238, 0.88) 100%);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8px 24px rgba(60, 60, 80, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 10px 14px;
+  transition: border-color 0.5s ease, box-shadow 0.5s ease, transform 0.5s ease;
 }
 
 .mood-cartridge.is-active .mood-cartridge-inner {
-  border-color: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 16px 40px rgba(60, 60, 90, 0.14);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 14px 34px rgba(60, 60, 90, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .mood-cartridge-glow {
@@ -350,46 +339,20 @@ button, input, select, textarea { font-family: inherit; }
   opacity: 0.65;
 }
 
-.mood-cartridge-strip {
-  height: 28px;
-  background: var(--mood-strip, linear-gradient(90deg, #f5c8f6, #dcceff));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.mood-cartridge-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 4px;
-}
-
-.mood-cartridge-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+.mood-cassette-svg {
+  display: block;
+  width: 58px;
+  height: auto;
 }
 
 .mood-cartridge-label {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-active);
   text-align: center;
-  line-height: 1.2;
-}
-
-.mood-cartridge-window {
-  width: 36px;
-  height: 14px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  line-height: 1.15;
+  max-width: 100%;
 }
 
 .vault-hint {
@@ -1129,11 +1092,12 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   .center-stage { top: 14%; }
 
   .mood-cartridge {
-    width: 60px;
-    height: 84px;
+    width: 84px;
   }
 
-  .cassette-track { gap: 6px; }
+  .mood-cassette-svg { width: 52px; }
+
+  .mood-card-row { gap: 10px; }
 }
 
 @media (max-width: 640px) {
@@ -1142,11 +1106,12 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-cartridge {
-    width: 52px;
-    height: 76px;
+    width: 76px;
   }
 
-  .mood-cartridge-label { font-size: 7px; }
+  .mood-cassette-svg { width: 48px; }
+
+  .mood-cartridge-label { font-size: 11px; }
 
   .stage-mood { font-size: 32px; }
 }

@@ -484,6 +484,26 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
+function cassetteIconHtml(mood) {
+  const body = mood.palette[0];
+  const hex = body.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const detail = lum > 0.72 ? 'rgba(42, 42, 54, 0.24)' : 'rgba(255, 255, 255, 0.92)';
+
+  return `
+    <svg class="mood-cassette-svg" viewBox="0 0 80 56" aria-hidden="true" style="--cassette-color:${body};--cassette-detail:${detail}">
+      <rect x="10" y="6" width="60" height="38" rx="5" fill="var(--cassette-color)"/>
+      <rect x="32" y="10" width="16" height="4" rx="2" fill="var(--cassette-detail)"/>
+      <circle cx="28" cy="26" r="8.5" fill="var(--cassette-detail)"/>
+      <circle cx="52" cy="26" r="8.5" fill="var(--cassette-detail)"/>
+      <path d="M24 38h32l-4 8H28l-4-8z" fill="none" stroke="var(--cassette-detail)" stroke-width="1.6" stroke-linejoin="round"/>
+    </svg>
+  `;
+}
+
 function buildMoodVault() {
   if (!moodVaultTrack) return;
   moodVaultTrack.innerHTML = '';
@@ -500,12 +520,8 @@ function buildMoodVault() {
     card.innerHTML = `
       <div class="mood-cartridge-glow" style="--mood-glow:${mood.glow}"></div>
       <div class="mood-cartridge-inner">
-        <div class="mood-cartridge-strip" style="--mood-strip:linear-gradient(90deg,${mood.palette.join(',')})"></div>
-        <div class="mood-cartridge-body">
-          <div class="mood-cartridge-icon"></div>
-          <span class="mood-cartridge-label">${mood.label}</span>
-          <div class="mood-cartridge-window"></div>
-        </div>
+        ${cassetteIconHtml(mood)}
+        <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
 
