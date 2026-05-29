@@ -305,8 +305,8 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
-  padding: 9px 9px 11px;
+  gap: 8px;
+  padding: 8px 8px 10px;
   transition: box-shadow 0.5s ease, transform 0.5s ease;
 }
 
@@ -316,8 +316,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .cassette-label-sheet {
   width: 100%;
-  height: 78px;
+  height: 40px;
   background: #fff;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,8 +327,7 @@ button, input, select, textarea { font-family: inherit; }
 
 .cassette-window {
   width: 74%;
-  height: 42%;
-  min-height: 28px;
+  height: 18px;
   background: var(--cassette-gradient);
   display: flex;
   align-items: center;
@@ -336,10 +336,8 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .cassette-spool {
-  width: 22%;
-  aspect-ratio: 1;
-  max-width: 22px;
-  max-height: 22px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #fff;
   flex-shrink: 0;
@@ -1112,8 +1110,6 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
     width: 104px;
   }
 
-  .cassette-label-sheet { height: 68px; }
-
   .mood-card-row { gap: 10px; }
 }
 
@@ -1125,8 +1121,6 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   .mood-cartridge {
     width: 96px;
   }
-
-  .cassette-label-sheet { height: 62px; }
 
   .mood-cartridge-label { font-size: 12px; }
 
