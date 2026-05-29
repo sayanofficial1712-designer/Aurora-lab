@@ -484,30 +484,25 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-function cassetteIconHtml(mood, moodId) {
-  const top = mood.palette[1] || mood.palette[0];
-  const bottom = mood.palette[2] || mood.palette[0];
-  const uid = String(moodId).replace(/[^a-z0-9_]/gi, '');
+function cassetteCardStyle(mood) {
+  const [c0, c1, c2] = mood.palette;
+  const hex = (c2 || c1 || c0).replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const labelColor = lum < 0.42 ? '#f4f7fa' : '#121218';
+  return `--cassette-gradient:linear-gradient(165deg, ${c0} 0%, ${c1} 50%, ${c2} 100%);--cassette-label:${labelColor}`;
+}
 
+function cassetteFaceHtml() {
   return `
-    <svg class="mood-cassette-svg" viewBox="0 0 80 56" aria-hidden="true">
-      <defs>
-        <linearGradient id="cassette-grad-${uid}" x1="40" y1="6" x2="40" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="${top}"/>
-          <stop offset="100%" stop-color="${bottom}"/>
-        </linearGradient>
-        <mask id="cassette-mask-${uid}">
-          <rect x="10" y="6" width="60" height="38" rx="5" fill="white"/>
-          <rect x="32" y="10" width="16" height="4" rx="2" fill="black"/>
-          <circle cx="28" cy="26" r="8.5" fill="black"/>
-          <circle cx="52" cy="26" r="8.5" fill="black"/>
-          <path d="M24 38h32l-4 8H28l-4-8z" fill="black"/>
-          <circle cx="34" cy="42" r="1.5" fill="black"/>
-          <circle cx="46" cy="42" r="1.5" fill="black"/>
-        </mask>
-      </defs>
-      <rect x="10" y="6" width="60" height="38" rx="5" fill="url(#cassette-grad-${uid})" mask="url(#cassette-mask-${uid})"/>
-    </svg>
+    <div class="cassette-label-sheet">
+      <div class="cassette-window">
+        <span class="cassette-spool"></span>
+        <span class="cassette-spool"></span>
+      </div>
+    </div>
   `;
 }
 
@@ -526,8 +521,8 @@ function buildMoodVault() {
 
     card.innerHTML = `
       <div class="mood-cartridge-glow" style="--mood-glow:${mood.glow}"></div>
-      <div class="mood-cartridge-inner">
-        ${cassetteIconHtml(mood, moodId)}
+      <div class="mood-cartridge-inner" style="${cassetteCardStyle(mood)}">
+        ${cassetteFaceHtml()}
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
