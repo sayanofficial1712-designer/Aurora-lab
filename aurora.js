@@ -484,22 +484,29 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-function cassetteIconHtml(mood) {
-  const body = mood.palette[0];
-  const hex = body.replace('#', '');
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  const detail = lum > 0.72 ? 'rgba(42, 42, 54, 0.24)' : 'rgba(255, 255, 255, 0.92)';
+function cassetteIconHtml(mood, moodId) {
+  const top = mood.palette[1] || mood.palette[0];
+  const bottom = mood.palette[2] || mood.palette[0];
+  const uid = String(moodId).replace(/[^a-z0-9_]/gi, '');
 
   return `
-    <svg class="mood-cassette-svg" viewBox="0 0 80 56" aria-hidden="true" style="--cassette-color:${body};--cassette-detail:${detail}">
-      <rect x="10" y="6" width="60" height="38" rx="5" fill="var(--cassette-color)"/>
-      <rect x="32" y="10" width="16" height="4" rx="2" fill="var(--cassette-detail)"/>
-      <circle cx="28" cy="26" r="8.5" fill="var(--cassette-detail)"/>
-      <circle cx="52" cy="26" r="8.5" fill="var(--cassette-detail)"/>
-      <path d="M24 38h32l-4 8H28l-4-8z" fill="none" stroke="var(--cassette-detail)" stroke-width="1.6" stroke-linejoin="round"/>
+    <svg class="mood-cassette-svg" viewBox="0 0 80 56" aria-hidden="true">
+      <defs>
+        <linearGradient id="cassette-grad-${uid}" x1="40" y1="6" x2="40" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="${top}"/>
+          <stop offset="100%" stop-color="${bottom}"/>
+        </linearGradient>
+        <mask id="cassette-mask-${uid}">
+          <rect x="10" y="6" width="60" height="38" rx="5" fill="white"/>
+          <rect x="32" y="10" width="16" height="4" rx="2" fill="black"/>
+          <circle cx="28" cy="26" r="8.5" fill="black"/>
+          <circle cx="52" cy="26" r="8.5" fill="black"/>
+          <path d="M24 38h32l-4 8H28l-4-8z" fill="black"/>
+          <circle cx="34" cy="42" r="1.5" fill="black"/>
+          <circle cx="46" cy="42" r="1.5" fill="black"/>
+        </mask>
+      </defs>
+      <rect x="10" y="6" width="60" height="38" rx="5" fill="url(#cassette-grad-${uid})" mask="url(#cassette-mask-${uid})"/>
     </svg>
   `;
 }
@@ -520,7 +527,7 @@ function buildMoodVault() {
     card.innerHTML = `
       <div class="mood-cartridge-glow" style="--mood-glow:${mood.glow}"></div>
       <div class="mood-cartridge-inner">
-        ${cassetteIconHtml(mood)}
+        ${cassetteIconHtml(mood, moodId)}
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;

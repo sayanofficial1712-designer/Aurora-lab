@@ -244,9 +244,9 @@ button, input, select, textarea { font-family: inherit; }
   align-items: flex-end;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
-  min-height: 130px;
+  min-height: 148px;
   padding: 4px 8px 8px;
   overflow-x: auto;
   overflow-y: visible;
@@ -262,12 +262,12 @@ button, input, select, textarea { font-family: inherit; }
 .mood-cartridge {
   position: relative;
   flex: 0 0 auto;
-  width: 96px;
+  width: 112px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  transform: translateY(8px);
+  transform: translateY(6px);
   transition:
     transform 0.55s cubic-bezier(0.34, 1.2, 0.48, 1),
     filter 0.5s ease;
@@ -297,29 +297,27 @@ button, input, select, textarea { font-family: inherit; }
 
 .mood-cartridge-inner {
   width: 100%;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(236, 236, 238, 0.88) 100%);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  background: radial-gradient(ellipse 88% 78% at 50% 38%, #f6f6f7 0%, #ececee 52%, #dcdde0 100%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow:
-    0 8px 24px rgba(60, 60, 80, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    0 8px 22px rgba(45, 45, 55, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 16px 10px 14px;
+  gap: 14px;
+  padding: 20px 14px 16px;
   transition: border-color 0.5s ease, box-shadow 0.5s ease, transform 0.5s ease;
 }
 
 .mood-cartridge.is-active .mood-cartridge-inner {
-  border-color: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 14px 34px rgba(60, 60, 90, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    0 14px 32px rgba(45, 45, 60, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .mood-cartridge-glow {
@@ -341,17 +339,17 @@ button, input, select, textarea { font-family: inherit; }
 
 .mood-cassette-svg {
   display: block;
-  width: 58px;
+  width: 74px;
   height: auto;
 }
 
 .mood-cartridge-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text-active);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #121218;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
   max-width: 100%;
 }
 
@@ -1092,10 +1090,10 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   .center-stage { top: 14%; }
 
   .mood-cartridge {
-    width: 84px;
+    width: 100px;
   }
 
-  .mood-cassette-svg { width: 52px; }
+  .mood-cassette-svg { width: 66px; }
 
   .mood-card-row { gap: 10px; }
 }
@@ -1106,12 +1104,12 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-cartridge {
-    width: 76px;
+    width: 92px;
   }
 
-  .mood-cassette-svg { width: 48px; }
+  .mood-cassette-svg { width: 60px; }
 
-  .mood-cartridge-label { font-size: 11px; }
+  .mood-cartridge-label { font-size: 12px; }
 
   .stage-mood { font-size: 32px; }
 }
