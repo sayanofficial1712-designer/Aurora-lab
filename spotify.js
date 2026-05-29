@@ -416,13 +416,15 @@ const _ACOUSTIC_GENRE_BOOST = [
 
 // Keyword hints in track/album titles — pushed further to extremes
 const _TITLE_HINTS = [
-  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25, mood: 'calm' },
-  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle)/i, energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'calm' },
+  { match: /(sad|lonely|cry|tears|heartbreak|melanchol|grief|funeral|alone|broken|gone)/i, energy: 0.2, valence: 0.12, tempo: 70, danceability: 0.25, mood: 'mellow' },
+  { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle|mellow)/i, energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'mellow' },
   { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i, energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95, mood: 'electric' },
   { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i, energy: 0.7, valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
   { match: /(midnight|night|dark|moon|after dark)/i, energy: 0.28, valence: 0.35, tempo: 82, danceability: 0.35, mood: 'midnight' },
   { match: /(memory|memories|nostalg|retro|90s|childhood|old days)/i, energy: 0.42, valence: 0.55, tempo: 95, danceability: 0.45, mood: 'memory_lane' },
-  { match: /(focus|work|study|locked|grind|phonk)/i, energy: 0.55, valence: 0.45, tempo: 105, danceability: 0.5, mood: 'locked_in' },
+  { match: /(bollywood|filmi|hindi film|desi|punjabi|shaadi|sangeet)/i, energy: 0.72, valence: 0.78, tempo: 112, danceability: 0.82, mood: 'bollywood' },
+  { match: /(indie(?! folk)|alternative|bedroom pop|offbeat)/i, energy: 0.48, valence: 0.58, tempo: 102, danceability: 0.52, mood: 'indie' },
+  { match: /(focus|work|study|grind)/i, energy: 0.35, valence: 0.48, tempo: 88, danceability: 0.35, mood: 'mellow' },
 ];
 
 // Hardcoded artist-name hints for artists whose Spotify genre tags are sparse/generic.
@@ -453,9 +455,18 @@ const _ARTIST_HINTS = {
   'adele': 'mellow', 'lana del rey': 'mellow', 'sufjan stevens': 'mellow',
   'elliott smith': 'mellow', 'nick cave': 'mellow', 'bon iver': 'mellow',
   'phoebe bridgers': 'mellow', 'james blake': 'mellow',
-  // Calm
-  'brian eno': 'calm', 'max richter': 'calm', 'ólafur arnalds': 'calm',
-  'olafur arnalds': 'calm', 'ludovico einaudi': 'calm', 'yiruma': 'calm',
+  'brian eno': 'mellow', 'max richter': 'mellow', 'ólafur arnalds': 'mellow',
+  'olafur arnalds': 'mellow', 'ludovico einaudi': 'mellow', 'yiruma': 'mellow',
+  // Indie
+  'prateek kuhad': 'indie', 'anuv jain': 'indie', 'the local train': 'indie',
+  'when chai met toast': 'indie', 'ritviz': 'indie', 'arctic monkeys': 'indie',
+  'tame impala': 'indie', 'the strokes': 'indie', 'radiohead': 'indie',
+  // Bollywood
+  'a.r. rahman': 'bollywood', 'ar rahman': 'bollywood', 'arijit singh': 'bollywood',
+  'shreya ghoshal': 'bollywood', 'pritam': 'bollywood', 'badshah': 'bollywood',
+  'diljit dosanjh': 'bollywood', 'diljit': 'bollywood', 'honey singh': 'bollywood',
+  'yo yo honey singh': 'bollywood', 'vishal-shekhar': 'bollywood', 'kk': 'bollywood',
+  'sonu nigam': 'bollywood', 'kumar sanu': 'bollywood', 'alka yagnik': 'bollywood',
 };
 
 function _inferMoodHint(genres, text, artistNames) {
@@ -484,14 +495,17 @@ function _inferMoodHint(genres, text, artistNames) {
   if (/(folk|acoustic|singer.?songwriter|blues|indie.?folk)/i.test(genreText)) {
     return 'memory_lane';
   }
+  if (/(bollywood|filmi|desi|hindi|punjabi pop|bhangra)/i.test(genreText)) {
+    return 'bollywood';
+  }
+  if (/(indie|alternative|indie.?rock|indie.?pop)/i.test(genreText)) {
+    return 'indie';
+  }
   if (/(ambient|chill|lofi|lo-fi|new.?age|downtempo|sleep|classical|orchestral|piano|baroque|opera)/i.test(genreText)) {
-    return 'calm';
+    return 'mellow';
   }
   if (/(synthwave|trip.?hop|dark.?ambient)/i.test(genreText)) {
     return 'midnight';
-  }
-  if (/(phonk|focus|study beats)/i.test(genreText)) {
-    return 'locked_in';
   }
   if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
     return 'cozy';

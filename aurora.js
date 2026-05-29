@@ -343,7 +343,7 @@ function logShaderParams(source) {
 
 function washStrengthForMood(moodId) {
   if (moodId === 'dreamy') return AURORA_DEBUG ? 0.22 : 0.10;
-  if (moodId === 'midnight' || moodId === 'locked_in') return 0;
+  if (moodId === 'midnight') return 0;
   return 0.04;
 }
 
