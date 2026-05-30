@@ -239,23 +239,26 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-/* Band — secondary glass stage */
+/* Band — cassette tray; clips cartridges inside */
 .mood-vault-case {
-  --cartridge-h: 48px;
-  --band-h: 60px;
-  --band-inset: calc((var(--band-h) - var(--cartridge-h)) / 2);
-  --emerge-hover: calc(var(--cartridge-h) * 0.18);
-  --emerge-active: calc(var(--cartridge-h) * 0.21);
-  --lift-hover: calc(-1 * (var(--band-inset) + var(--emerge-hover)));
-  --lift-active: calc(-1 * (var(--band-inset) + var(--emerge-active)));
+  --cartridge-h: 56px;
+  --vault-h: 84px;
+  --tray-pad: 10px;
+  --peek-rest: 11px;
+  --peek-add-hover: 11px;
+  --peek-add-active: 16px;
+  /* Positive bury sinks bulk below clip; less bury = more top emerges */
+  --bury-rest: calc(var(--tray-pad) + var(--cartridge-h) - var(--peek-rest));
+  --bury-hover: calc(var(--bury-rest) - var(--peek-add-hover));
+  --bury-active: calc(var(--bury-rest) - var(--peek-add-active));
 
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
   max-width: 1000px;
-  height: var(--band-h);
+  height: var(--vault-h);
   padding: 0 12px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.06);
@@ -263,7 +266,7 @@ button, input, select, textarea { font-family: inherit; }
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .mood-vault-case::before {
@@ -280,8 +283,9 @@ button, input, select, textarea { font-family: inherit; }
   min-width: 0;
   height: 100%;
   display: flex;
-  align-items: center;
-  overflow: visible;
+  align-items: flex-end;
+  padding-bottom: var(--tray-pad, 10px);
+  overflow: hidden;
 }
 
 .vault-scroll {
@@ -315,7 +319,7 @@ button, input, select, textarea { font-family: inherit; }
 .mood-vault-rail {
   width: 100%;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -326,25 +330,25 @@ button, input, select, textarea { font-family: inherit; }
 
 .mood-card-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   gap: 14px;
   min-width: min-content;
-  height: var(--cartridge-h, 48px);
+  height: var(--cartridge-h, 56px);
   padding: 0 6px;
 }
 
-/* Cartridges — dock items inside the band */
+/* Cartridges — peek from tray; positive translateY keeps bulk clipped inside */
 .mood-cartridge {
   position: relative;
   flex: 0 0 auto;
   width: 92px;
-  height: 48px;
+  height: var(--cartridge-h, 56px);
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  transform: translateY(0) scale(1);
+  transform: translateY(var(--bury-rest, 55px)) scale(1);
   transition: transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
@@ -356,18 +360,18 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 @keyframes cartridge-spring {
-  0% { transform: translateY(var(--lift-active, -16.56px)) scale(1.1); }
-  45% { transform: translateY(calc(var(--lift-active, -16.56px) - 3px)) scale(1.12); }
-  100% { transform: translateY(var(--lift-active, -16.56px)) scale(1.1); }
+  0% { transform: translateY(var(--bury-active, 39px)) scale(1.05); }
+  45% { transform: translateY(calc(var(--bury-active, 39px) - 2px)) scale(1.06); }
+  100% { transform: translateY(var(--bury-active, 39px)) scale(1.05); }
 }
 
 .mood-cartridge:hover:not(.is-active) {
-  transform: translateY(var(--lift-hover, -14.64px)) scale(1.05);
+  transform: translateY(var(--bury-hover, 44px)) scale(1.03);
   z-index: 6;
 }
 
 .mood-cartridge.is-active {
-  transform: translateY(var(--lift-active, -16.56px)) scale(1.1);
+  transform: translateY(var(--bury-active, 39px)) scale(1.05);
   z-index: 10;
 }
 
@@ -405,13 +409,13 @@ button, input, select, textarea { font-family: inherit; }
   border-color: rgba(255, 255, 255, 0.32);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.44),
-    0 3px 10px rgba(40, 40, 55, 0.05);
+    0 2px 6px rgba(40, 40, 55, 0.04);
 }
 
 .mood-cartridge-band {
   position: relative;
   z-index: 1;
-  height: 10px;
+  height: 12px;
   flex-shrink: 0;
   border-radius: 7px 7px 0 0;
   opacity: 0.9;
@@ -430,11 +434,11 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .mood-cartridge:hover .mood-cartridge-glow {
-  opacity: 0.14;
+  opacity: 0.1;
 }
 
 .mood-cartridge.is-active .mood-cartridge-glow {
-  opacity: 0.22;
+  opacity: 0.14;
 }
 
 .mood-cartridge-label {
@@ -1182,8 +1186,9 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   .center-stage { top: 14%; }
 
   .mood-vault-case {
-    --band-h: 58px;
-    height: 58px;
+    --vault-h: 82px;
+    --tray-pad: 9px;
+    height: var(--vault-h);
     padding: 0 10px;
   }
 
@@ -1203,8 +1208,9 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-vault-case {
-    --band-h: 56px;
-    height: 56px;
+    --vault-h: 80px;
+    --tray-pad: 8px;
+    height: var(--vault-h);
     border-radius: 20px;
   }
 
