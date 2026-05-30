@@ -136,67 +136,6 @@ button, input, select, textarea { font-family: inherit; }
   color: var(--text-muted);
 }
 
-/* Center stage */
-.center-stage {
-  position: fixed;
-  top: 18%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  text-align: center;
-  max-width: 560px;
-  padding: 0 24px;
-  pointer-events: none;
-}
-
-.center-stage-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stage-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.stage-mood {
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: 700;
-  letter-spacing: -1px;
-  line-height: 1.05;
-  color: var(--text-active);
-  transition: color 0.8s ease;
-}
-
-.stage-track {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  min-height: 1.2em;
-}
-
-.stage-atmosphere {
-  font-size: 12px;
-  letter-spacing: 0.4px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.stage-confidence {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-
-.stage-confidence strong {
-  color: var(--text-active);
-  font-weight: 600;
-}
-
 /* Mood vault — macOS Dock emergence from cassette holder */
 .mood-vault-wrap {
   position: fixed;
@@ -207,7 +146,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   width: min(1000px, calc(100vw - var(--gap) * 2));
   padding-top: 18px;
 }
@@ -467,13 +406,15 @@ button, input, select, textarea { font-family: inherit; }
   color: rgba(248, 250, 252, 0.9);
 }
 
-.vault-hint {
-  font-size: 13px;
+.vault-micro-label {
+  font-size: 11px;
   font-weight: 500;
-  color: rgba(28, 28, 36, 0.88);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(28, 28, 36, 0.4);
   text-align: center;
-  letter-spacing: 0.01em;
-  line-height: 1.45;
+  margin: 0;
+  user-select: none;
 }
 
 /* Soundtrack cards (legacy — used by Spotify stack if present) */
@@ -1180,8 +1121,6 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
 @media (max-width: 900px) {
   :root { --capsule-w: min(360px, calc(100vw - var(--gap) * 2)); }
 
-  .center-stage { top: 14%; }
-
   .mood-vault-wrap {
     padding-top: 16px;
   }
@@ -1224,12 +1163,10 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
     font-size: 10px;
   }
 
-  .vault-hint {
-    font-size: 13px;
-    padding: 0 8px;
+  .vault-micro-label {
+    font-size: 11px;
   }
 
-  .stage-mood { font-size: 32px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

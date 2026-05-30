@@ -273,14 +273,9 @@ const moodVaultTrack = document.getElementById('moodVaultTrack');
 const moodVaultRail = document.getElementById('moodVaultRail');
 const vaultScrollPrev = document.getElementById('vaultScrollPrev');
 const vaultScrollNext = document.getElementById('vaultScrollNext');
-const moodLibraryHint = document.getElementById('moodLibraryHint');
 const modeAutoBtn = document.getElementById('modeAutoBtn');
 const modeLockBtn = document.getElementById('modeLockBtn');
 const brandDot = document.querySelector('.brand-dot');
-const stageMood = document.getElementById('stageMood');
-const stageAtmosphere = document.getElementById('stageAtmosphere');
-const npTrack = document.getElementById('npTrack');
-const npMood = document.getElementById('npMood');
 const controlsToggle = document.getElementById('controlsToggle');
 const controlsCloseBtn = document.getElementById('controlsCloseBtn');
 const controlsPanelWrap = document.querySelector('.controls-panel-wrap');
@@ -415,43 +410,21 @@ function updateSliderLabels() {
   if (sliderValueLabels.intensity) sliderValueLabels.intensity.textContent = intensitySlider.value;
 }
 
-function updateCenterStage(moodId) {
-  const mood = MOODS[moodId];
-  if (!mood) return;
-  if (stageMood) stageMood.textContent = mood.label;
-  if (stageAtmosphere) stageAtmosphere.textContent = mood.atmosphere;
-}
-
 function setActiveMood(moodId) {
   const libId = toLibraryMood(moodId);
   activeMood = libId;
   document.querySelectorAll('.mood-cartridge').forEach((card) => {
     card.classList.toggle('is-active', card.dataset.mood === libId);
   });
-  updateCenterStage(libId);
-  if (moodLibraryHint && !window.spotifyState?.connected && window._auroraAutoMode !== false) {
-    moodLibraryHint.textContent = MOODS[libId]?.descriptor || '';
-  }
 }
 
 function setMoodConfidence(percent) {
   moodConfidence = Math.max(0, Math.min(100, percent));
-  if (!npMood) return;
-  if (moodConfidence > 0 && activeMood) {
-    const label = MOODS[activeMood]?.label || activeMood;
-    npMood.hidden = false;
-    npMood.innerHTML = window._auroraAutoMode !== false
-      ? `<strong>${label}</strong> (${Math.round(moodConfidence)}%)`
-      : '';
-  } else {
-    npMood.hidden = true;
-  }
 }
 
 function clearActiveMood() {
   activeMood = null;
   document.querySelectorAll('.mood-cartridge').forEach((card) => card.classList.remove('is-active'));
-  if (moodLibraryHint) moodLibraryHint.textContent = 'Hover to preview · Click to lock mood';
 }
 
 function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
@@ -468,7 +441,6 @@ function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
     if (modeLockBtn) modeLockBtn.classList.add('active');
     if (modeAutoBtn) modeAutoBtn.classList.remove('active');
     setMoodConfidence(0);
-    if (npMood) npMood.hidden = true;
   }
 
   if (lock) {
@@ -595,12 +567,7 @@ function updateMoodGlow(moodId, colors) {
   }
 }
 
-function updateLockMoodUI() {
-  const locked = window._auroraAutoMode === false;
-  if (locked && activeMood && moodLibraryHint) {
-    moodLibraryHint.textContent = MOODS[activeMood]?.descriptor || 'Mood locked';
-  }
-}
+function updateLockMoodUI() {}
 
 let _transitionToken = 0;
 
@@ -722,10 +689,8 @@ window.applyMoodVisuals = applyMoodVisuals;
 window.applyMoodImmediate = applyMoodImmediate;
 window.getActiveMood = () => activeMood;
 window.updateLockMoodUI = updateLockMoodUI;
-window.updateCenterStage = updateCenterStage;
-window.setStageTrack = (title) => {
-  if (npTrack) npTrack.textContent = title || '';
-};
+window.updateCenterStage = () => {};
+window.setStageTrack = () => {};
 
 function loadFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -788,7 +753,6 @@ function bootAuroraUI() {
       setSliders(DEFAULT_SLIDERS);
     }
     setActiveMood('dreamy');
-    if (moodLibraryHint) moodLibraryHint.textContent = MOODS.dreamy.descriptor;
   }
   updateSliderLabels();
 
@@ -798,7 +762,6 @@ function bootAuroraUI() {
       window._auroraManualLock = false;
       modeAutoBtn.classList.add('active');
       modeLockBtn.classList.remove('active');
-      if (moodLibraryHint) moodLibraryHint.textContent = 'Spotify will guide your mood';
       updateLockMoodUI();
       if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
       if (window.spotifyState?.connected && typeof window.refreshSpotifyMood === 'function') {
@@ -814,11 +777,6 @@ function bootAuroraUI() {
       modeLockBtn.classList.add('active');
       modeAutoBtn.classList.remove('active');
       updateLockMoodUI();
-      if (activeMood && moodLibraryHint) {
-        moodLibraryHint.textContent = MOODS[activeMood]?.descriptor || 'Pick a cartridge to lock';
-      } else if (moodLibraryHint) {
-        moodLibraryHint.textContent = 'Pick a cartridge to lock mood';
-      }
     });
   }
 

@@ -793,7 +793,6 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   const artistEl = document.getElementById('spotifyArtist');
   const capsuleTitle = document.getElementById('capsuleTrackTitle');
   const capsuleArtist = document.getElementById('capsuleTrackArtist');
-  const hintEl = document.getElementById('moodLibraryHint');
 
   if (!trackEl) return;
 
@@ -802,11 +801,7 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
     if (artistEl) artistEl.textContent = 'Connect Spotify';
     if (capsuleTitle) capsuleTitle.textContent = 'Nothing playing';
     if (capsuleArtist) capsuleArtist.textContent = 'Connect Spotify';
-    if (typeof window.setStageTrack === 'function') window.setStageTrack('');
     _clearArtElements();
-    if (hintEl && window._auroraAutoMode !== false) {
-      hintEl.textContent = 'Connect Spotify — music guides your mood';
-    }
     _isPlaying = false;
     _updatePlayPauseUI();
     _updateProgress(0, 0);
@@ -820,7 +815,6 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
   if (artistEl) artistEl.textContent = artists;
   if (capsuleTitle) capsuleTitle.textContent = title;
   if (capsuleArtist) capsuleArtist.textContent = artists;
-  if (typeof window.setStageTrack === 'function') window.setStageTrack(title);
 
   const artUrl = track.album?.images?.[0]?.url;
   if (artUrl) _setArtOnElements(artUrl, title);
@@ -838,22 +832,8 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 }
 
 function _announceMood(mood, track, confidence = 0) {
-  const libMood = window.AuroraMoods.toLibraryMood(mood);
-  const moodData = window.AuroraMoods.MOODS[libMood];
-  const hintEl = document.getElementById('moodLibraryHint');
-
-  if (typeof window.updateCenterStage === 'function' && !window._auroraManualLock) {
-    window.updateCenterStage(libMood);
-  }
-
   if (typeof window.setMoodConfidence === 'function' && !window._auroraManualLock) {
     window.setMoodConfidence(confidence);
-  }
-
-  if (hintEl && window._auroraAutoMode !== false && moodData) {
-    hintEl.textContent = confidence
-      ? `${moodData.label} (${Math.round(confidence)}%)`
-      : moodData.label;
   }
 }
 
@@ -1069,8 +1049,7 @@ async function _generateSoundtrack() {
     return;
   }
   if (!window.spotifyState.connected) {
-    const hintEl = document.getElementById('moodLibraryHint');
-    if (hintEl) hintEl.textContent = 'Connect Spotify in capsule to generate soundtrack';
+    _showControlFeedback('Connect Spotify in capsule to generate soundtrack', true);
     return;
   }
 

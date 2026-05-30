@@ -19,23 +19,14 @@
       </button>
     </header>
 
-    <!-- Center stage — cinematic calm -->
-    <main class="center-stage" aria-live="polite">
-      <section class="center-stage-inner">
-        <p class="stage-label" id="discoveryLabel">Now in your Aurora</p>
-        <h1 class="stage-mood" id="stageMood">Dreamy</h1>
-        <p class="stage-track" id="npTrack"></p>
-        <p class="stage-atmosphere" id="stageAtmosphere">soft flow • gentle light • dreamy</p>
-        <p class="stage-confidence" id="npMood" hidden></p>
-      </section>
-    </main>
-
     <!-- Mood Cassette Vault — hero -->
     <section class="mood-vault-wrap" aria-label="Mood Library">
       <div class="mood-mode" role="group" aria-label="Mood mode">
         <button type="button" class="mode-btn active" id="modeAutoBtn" data-mode="auto">Auto</button>
         <button type="button" class="mode-btn" id="modeLockBtn" data-mode="lock">Lock mood</button>
       </div>
+
+      <p class="vault-micro-label">Current mood</p>
 
       <div class="mood-vault-case">
         <button type="button" class="vault-scroll vault-scroll--prev" id="vaultScrollPrev" aria-label="Scroll moods left" hidden>
@@ -50,8 +41,6 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
-
-      <p class="vault-hint" id="moodLibraryHint">Hover to preview · Click to lock mood</p>
     </section>
 
     <!-- Music Capsule — top right -->
