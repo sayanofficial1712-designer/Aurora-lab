@@ -270,8 +270,10 @@ const shareBtn = document.getElementById('shareBtn');
 const exportBtn = document.getElementById('exportBtn');
 const resetBtn = document.getElementById('resetBtn');
 const moodVaultTrack = document.getElementById('moodVaultTrack');
+const moodVaultRail = document.getElementById('moodVaultRail');
+const vaultScrollPrev = document.getElementById('vaultScrollPrev');
+const vaultScrollNext = document.getElementById('vaultScrollNext');
 const moodLibraryHint = document.getElementById('moodLibraryHint');
-const moodSoundtrack = document.getElementById('moodSoundtrack');
 const modeAutoBtn = document.getElementById('modeAutoBtn');
 const modeLockBtn = document.getElementById('modeLockBtn');
 const brandDot = document.querySelector('.brand-dot');
@@ -484,26 +486,42 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-function cassetteCardStyle(mood) {
+function cartridgeBandStyle(mood) {
   const [c0, c1, c2] = mood.palette;
-  const hex = (c2 || c1 || c0).replace('#', '');
+  return `background:linear-gradient(135deg, ${c0} 0%, ${c1} 52%, ${c2} 100%)`;
+}
+
+function cartridgeLabelTone(mood) {
+  const hex = (mood.palette[2] || mood.palette[0]).replace('#', '');
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  const labelColor = lum < 0.42 ? '#f4f7fa' : '#121218';
-  return `--cassette-gradient:linear-gradient(165deg, ${c0} 0%, ${c1} 50%, ${c2} 100%);--cassette-label:${labelColor}`;
+  return lum < 0.48 ? 'light' : 'dark';
 }
 
-function cassetteFaceHtml() {
-  return `
-    <div class="cassette-label-sheet">
-      <div class="cassette-window">
-        <span class="cassette-spool"></span>
-        <span class="cassette-spool"></span>
-      </div>
-    </div>
-  `;
+function updateVaultScrollState() {
+  if (!moodVaultRail) return;
+  const maxScroll = moodVaultRail.scrollWidth - moodVaultRail.clientWidth;
+  const hasOverflow = maxScroll > 4;
+  if (vaultScrollPrev) vaultScrollPrev.hidden = !hasOverflow;
+  if (vaultScrollNext) vaultScrollNext.hidden = !hasOverflow;
+  if (vaultScrollPrev) vaultScrollPrev.disabled = moodVaultRail.scrollLeft <= 4;
+  if (vaultScrollNext) vaultScrollNext.disabled = moodVaultRail.scrollLeft >= maxScroll - 4;
+}
+
+function bindVaultScrollControls() {
+  if (!moodVaultRail) return;
+  const step = () => Math.max(120, moodVaultRail.clientWidth * 0.42);
+  vaultScrollPrev?.addEventListener('click', () => {
+    moodVaultRail.scrollBy({ left: -step(), behavior: 'smooth' });
+  });
+  vaultScrollNext?.addEventListener('click', () => {
+    moodVaultRail.scrollBy({ left: step(), behavior: 'smooth' });
+  });
+  moodVaultRail.addEventListener('scroll', updateVaultScrollState, { passive: true });
+  window.addEventListener('resize', updateVaultScrollState);
+  updateVaultScrollState();
 }
 
 function buildMoodVault() {
@@ -516,13 +534,14 @@ function buildMoodVault() {
     card.type = 'button';
     card.className = 'mood-cartridge';
     card.dataset.mood = moodId;
+    card.dataset.tone = cartridgeLabelTone(mood);
     card.setAttribute('role', 'listitem');
     card.setAttribute('aria-label', `${mood.label} mood`);
 
     card.innerHTML = `
       <div class="mood-cartridge-glow" style="--mood-glow:${mood.glow}"></div>
-      <div class="mood-cartridge-inner" style="${cassetteCardStyle(mood)}">
-        ${cassetteFaceHtml()}
+      <div class="mood-cartridge-body">
+        <div class="mood-cartridge-band" style="${cartridgeBandStyle(mood)}"></div>
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
@@ -535,7 +554,7 @@ function buildMoodVault() {
       e.preventDefault();
       selectMoodCard(moodId, { lock: true });
       card.classList.add('is-picked');
-      setTimeout(() => card.classList.remove('is-picked'), 420);
+      setTimeout(() => card.classList.remove('is-picked'), 480);
       if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
     });
 
@@ -546,6 +565,9 @@ function buildMoodVault() {
     if (!activeMood) return;
     applyMoodImmediate(activeMood, { updateActive: false });
   });
+
+  bindVaultScrollControls();
+  requestAnimationFrame(updateVaultScrollState);
 }
 
 function openControls() {
@@ -575,7 +597,6 @@ function updateMoodGlow(moodId, colors) {
 
 function updateLockMoodUI() {
   const locked = window._auroraAutoMode === false;
-  if (moodSoundtrack) moodSoundtrack.hidden = !(locked && activeMood);
   if (locked && activeMood && moodLibraryHint) {
     moodLibraryHint.textContent = MOODS[activeMood]?.descriptor || 'Mood locked';
   }

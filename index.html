@@ -37,14 +37,19 @@
         <button type="button" class="mode-btn" id="modeLockBtn" data-mode="lock">Lock mood</button>
       </div>
 
-      <div class="mood-card-row" id="moodVaultTrack" role="list"></div>
+      <div class="mood-vault-case">
+        <button type="button" class="vault-scroll vault-scroll--prev" id="vaultScrollPrev" aria-label="Scroll moods left" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="mood-vault-rail" id="moodVaultRail">
+          <div class="mood-card-row" id="moodVaultTrack" role="list"></div>
+        </div>
+        <button type="button" class="vault-scroll vault-scroll--next" id="vaultScrollNext" aria-label="Scroll moods right" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
 
       <p class="vault-hint" id="moodLibraryHint">Hover to preview · Click to lock mood</p>
-
-      <div class="mood-soundtrack" id="moodSoundtrack" hidden>
-        <button type="button" class="soundtrack-btn" id="generateSoundtrackBtn">Generate soundtrack</button>
-        <div class="soundtrack-stack" id="soundtrackStack" role="list" aria-label="Recommended tracks"></div>
-      </div>
     </section>
 
     <!-- Music Capsule — top right -->
