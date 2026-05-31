@@ -270,9 +270,6 @@ const shareBtn = document.getElementById('shareBtn');
 const exportBtn = document.getElementById('exportBtn');
 const resetBtn = document.getElementById('resetBtn');
 const moodVaultTrack = document.getElementById('moodVaultTrack');
-const moodVaultRail = document.getElementById('moodVaultRail');
-const vaultScrollPrev = document.getElementById('vaultScrollPrev');
-const vaultScrollNext = document.getElementById('vaultScrollNext');
 const modeAutoBtn = document.getElementById('modeAutoBtn');
 const modeLockBtn = document.getElementById('modeLockBtn');
 const brandDot = document.querySelector('.brand-dot');
@@ -458,50 +455,26 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-const CARTRIDGE_STRIPS = {
-  dreamy: ['#B8A4E8', '#F5B4C8'],
-  electric: ['#22D3EE', '#8B5CF6'],
-  cozy: ['#FFF1E0', '#F0A8B8'],
-  mellow: ['#B0BEC8', '#E8EEF2'],
+const MOOD_GRADIENTS = {
+  dreamy: ['#B8A9E8', '#F5B8C8'],
+  electric: ['#22D3EE', '#4F46E5'],
+  cozy: ['#FFF4E6', '#F4A4B0'],
+  mellow: ['#A8B8C4', '#E2E8F0'],
   bold: ['#F472B6', '#9333EA'],
-  memory_lane: ['#E2D4BC', '#F7EFE3'],
-  midnight: ['#1E3A5F', '#3B82F6'],
-  indie: ['#2F6B4F', '#6EE7B7'],
+  memory_lane: ['#C4A882', '#F5EBD9'],
+  midnight: ['#0F2847', '#3B82F6'],
+  indie: ['#2D6A4F', '#6EE7B7'],
   bollywood: ['#FB923C', '#DB2777'],
 };
 
-function cartridgeBandStyle(moodId) {
-  const strip = CARTRIDGE_STRIPS[moodId] || CARTRIDGE_STRIPS.dreamy;
-  return `background:linear-gradient(90deg, ${strip[0]} 0%, ${strip[1]} 100%)`;
+function moodCardGradientStyle(moodId) {
+  const [c0, c1] = MOOD_GRADIENTS[moodId] || MOOD_GRADIENTS.dreamy;
+  return `background:linear-gradient(165deg, ${c0} 0%, ${c1} 100%)`;
 }
 
-function cartridgeGlowStyle(moodId) {
-  const strip = CARTRIDGE_STRIPS[moodId] || CARTRIDGE_STRIPS.dreamy;
-  return `linear-gradient(160deg, ${strip[0]}, ${strip[1]})`;
-}
-
-function updateVaultScrollState() {
-  if (!moodVaultRail) return;
-  const maxScroll = moodVaultRail.scrollWidth - moodVaultRail.clientWidth;
-  const hasOverflow = maxScroll > 4;
-  if (vaultScrollPrev) vaultScrollPrev.hidden = !hasOverflow;
-  if (vaultScrollNext) vaultScrollNext.hidden = !hasOverflow;
-  if (vaultScrollPrev) vaultScrollPrev.disabled = moodVaultRail.scrollLeft <= 4;
-  if (vaultScrollNext) vaultScrollNext.disabled = moodVaultRail.scrollLeft >= maxScroll - 4;
-}
-
-function bindVaultScrollControls() {
-  if (!moodVaultRail) return;
-  const step = () => Math.max(120, moodVaultRail.clientWidth * 0.42);
-  vaultScrollPrev?.addEventListener('click', () => {
-    moodVaultRail.scrollBy({ left: -step(), behavior: 'smooth' });
-  });
-  vaultScrollNext?.addEventListener('click', () => {
-    moodVaultRail.scrollBy({ left: step(), behavior: 'smooth' });
-  });
-  moodVaultRail.addEventListener('scroll', updateVaultScrollState, { passive: true });
-  window.addEventListener('resize', updateVaultScrollState);
-  updateVaultScrollState();
+function moodCardGlowStyle(moodId) {
+  const [c0, c1] = MOOD_GRADIENTS[moodId] || MOOD_GRADIENTS.dreamy;
+  return `linear-gradient(165deg, ${c0}, ${c1})`;
 }
 
 function buildMoodVault() {
@@ -518,9 +491,8 @@ function buildMoodVault() {
     card.setAttribute('aria-label', `${mood.label} mood`);
 
     card.innerHTML = `
-      <div class="mood-cartridge-glow" style="--mood-glow:${cartridgeGlowStyle(moodId)}"></div>
-      <div class="mood-cartridge-body">
-        <div class="mood-cartridge-band" style="${cartridgeBandStyle(moodId)}"></div>
+      <div class="mood-cartridge-glow" style="--mood-glow:${moodCardGlowStyle(moodId)}"></div>
+      <div class="mood-cartridge-body" style="${moodCardGradientStyle(moodId)}">
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
@@ -544,9 +516,6 @@ function buildMoodVault() {
     if (!activeMood) return;
     applyMoodImmediate(activeMood, { updateActive: false });
   });
-
-  bindVaultScrollControls();
-  requestAnimationFrame(updateVaultScrollState);
 }
 
 function openControls() {
@@ -564,7 +533,7 @@ function closeControls() {
 function updateMoodGlow(moodId, colors) {
   const mood = MOODS[moodId];
   if (!mood) return;
-  const glow = cartridgeGlowStyle(toLibraryMood(moodId));
+  const glow = moodCardGlowStyle(toLibraryMood(moodId));
   document.querySelectorAll(`.mood-cartridge[data-mood="${moodId}"] .mood-cartridge-glow`).forEach((el) => {
     el.style.setProperty('--mood-glow', glow);
   });
