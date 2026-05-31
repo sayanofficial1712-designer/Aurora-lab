@@ -467,14 +467,17 @@ const MOOD_GRADIENTS = {
   bollywood: ['#FB923C', '#DB2777'],
 };
 
-function moodCardGradientStyle(moodId) {
-  const [c0, c1] = MOOD_GRADIENTS[moodId] || MOOD_GRADIENTS.dreamy;
-  return `background:linear-gradient(165deg, ${c0} 0%, ${c1} 100%)`;
+function moodShadowRgba(hex, alpha = 0.2) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function moodCardGlowStyle(moodId) {
+function moodCardSurfaceStyle(moodId) {
   const [c0, c1] = MOOD_GRADIENTS[moodId] || MOOD_GRADIENTS.dreamy;
-  return `linear-gradient(165deg, ${c0}, ${c1})`;
+  return `background:linear-gradient(165deg, ${c0} 0%, ${c1} 100%);--mood-shadow:${moodShadowRgba(c1, 0.2)}`;
 }
 
 function buildMoodVault() {
@@ -491,11 +494,8 @@ function buildMoodVault() {
     card.setAttribute('aria-label', `${mood.label} mood`);
 
     card.innerHTML = `
-      <div class="mood-cartridge-glow" style="--mood-glow:${moodCardGlowStyle(moodId)}"></div>
-      <div class="mood-cartridge-shell">
-        <div class="mood-cartridge-surface" style="${moodCardGradientStyle(moodId)}">
-          <span class="mood-cartridge-label">${mood.label}</span>
-        </div>
+      <div class="mood-cartridge-surface" style="${moodCardSurfaceStyle(moodId)}">
+        <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
 
@@ -533,12 +533,14 @@ function closeControls() {
 }
 
 function updateMoodGlow(moodId, colors) {
-  const mood = MOODS[moodId];
-  if (!mood) return;
-  const glow = moodCardGlowStyle(toLibraryMood(moodId));
-  document.querySelectorAll(`.mood-cartridge[data-mood="${moodId}"] .mood-cartridge-glow`).forEach((el) => {
-    el.style.setProperty('--mood-glow', glow);
-  });
+  const libId = toLibraryMood(moodId);
+  const accent = colors?.[1] || MOOD_GRADIENTS[libId]?.[1];
+  if (accent) {
+    const shadow = moodShadowRgba(accent, 0.2);
+    document.querySelectorAll(`.mood-cartridge[data-mood="${libId}"] .mood-cartridge-surface`).forEach((el) => {
+      el.style.setProperty('--mood-shadow', shadow);
+    });
+  }
   if (brandDot && colors) {
     brandDot.style.background = `radial-gradient(circle at 30% 30%, ${colors[0]}, ${colors[1]} 45%, ${colors[2]} 90%)`;
     brandDot.style.boxShadow = `0 0 14px ${colors[0]}55`;

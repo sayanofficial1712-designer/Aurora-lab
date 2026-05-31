@@ -140,8 +140,8 @@ button, input, select, textarea { font-family: inherit; }
 .mood-library {
   --card-w: 96px;
   --card-h: 56px;
-  --lift-hover: 8px;
-  --lift-active: 14px;
+  --lift-hover: 4px;
+  --lift-active: 10px;
   --spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   position: fixed;
@@ -210,7 +210,7 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent;
   cursor: pointer;
   opacity: 0.85;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
   transition:
     transform var(--spring, 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)),
     opacity var(--spring, 0.28s) ease;
@@ -224,126 +224,63 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 @keyframes mood-card-spring {
-  0% { transform: translateY(calc(-1 * var(--lift-active, 14px))) scale(1.05); }
-  45% { transform: translateY(calc(-1 * var(--lift-active, 14px) - 2px)) scale(1.06); }
-  100% { transform: translateY(calc(-1 * var(--lift-active, 14px))) scale(1.05); }
+  0% { transform: translateY(calc(-1 * var(--lift-active, 10px))); }
+  45% { transform: translateY(calc(-1 * var(--lift-active, 10px) - 2px)); }
+  100% { transform: translateY(calc(-1 * var(--lift-active, 10px))); }
 }
 
 .mood-cartridge:hover:not(.is-active) {
   opacity: 1;
-  transform: translateY(calc(-1 * var(--lift-hover, 8px))) scale(1.03);
+  transform: translateY(calc(-1 * var(--lift-hover, 4px)));
   z-index: 2;
 }
 
 .mood-cartridge.is-active {
   opacity: 1;
-  transform: translateY(calc(-1 * var(--lift-active, 14px))) scale(1.05);
+  transform: translateY(calc(-1 * var(--lift-active, 10px)));
   z-index: 3;
 }
 
-/* Outer glass shell */
-.mood-cartridge-shell {
-  width: 100%;
-  height: 100%;
-  padding: 4px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-  transition:
-    box-shadow var(--spring, 0.28s) ease,
-    border-color var(--spring, 0.28s) ease;
-}
-
-.mood-cartridge:hover:not(.is-active) .mood-cartridge-shell {
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
-}
-
-.mood-cartridge.is-active .mood-cartridge-shell {
-  border-color: rgba(255, 255, 255, 0.72);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.4),
-    0 0 20px rgba(255, 255, 255, 0.2),
-    0 10px 28px rgba(0, 0, 0, 0.09);
-}
-
-/* Inner mood surface */
 .mood-cartridge-surface {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 18px;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  filter: saturate(0.75);
-  transition: filter var(--spring, 0.28s) ease;
+  align-items: center;
+  justify-content: center;
+  filter: saturate(0.82);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow var(--spring, 0.28s) ease;
 }
 
-.mood-cartridge-surface::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 55%;
-  height: 70%;
-  background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.32), transparent 68%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--spring, 0.28s) ease;
-  z-index: 1;
-}
-
-.mood-cartridge-surface::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
-  pointer-events: none;
-}
-
-.mood-cartridge.is-active .mood-cartridge-surface::before {
-  opacity: 1;
-}
-
-.mood-cartridge-glow {
-  position: absolute;
-  inset: -6px -4px;
-  border-radius: 12px;
-  background: var(--mood-glow);
-  opacity: 0;
-  filter: blur(16px) saturate(0.75);
-  transition: opacity var(--spring, 0.28s) ease;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.mood-cartridge.is-active .mood-cartridge-glow {
-  opacity: 0.42;
+.mood-cartridge.is-active .mood-cartridge-surface {
+  box-shadow:
+    0 16px 40px var(--mood-shadow, rgba(0, 0, 0, 0.12)),
+    0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .mood-cartridge-label {
   position: relative;
-  z-index: 2;
-  padding: 8px 0 0 8px;
+  z-index: 1;
+  padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
-  text-align: left;
+  text-align: center;
   line-height: 1.2;
-  color: rgba(0, 0, 0, 0.88);
+  color: rgba(45, 42, 52, 0.82);
 }
 
 .mood-cartridge[data-mood="electric"] .mood-cartridge-label,
+.mood-cartridge[data-mood="bold"] .mood-cartridge-label,
 .mood-cartridge[data-mood="midnight"] .mood-cartridge-label,
 .mood-cartridge[data-mood="indie"] .mood-cartridge-label,
 .mood-cartridge[data-mood="bollywood"] .mood-cartridge-label {
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Soundtrack cards (legacy — used by Spotify stack if present) */
@@ -1073,7 +1010,7 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   .mood-cartridge-label {
     font-size: 12px;
     letter-spacing: 0;
-    padding: 6px 0 0 6px;
+    padding: 0 6px;
   }
 }
 
