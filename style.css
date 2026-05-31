@@ -139,7 +139,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Mood library — floating gradient cards */
 .mood-library {
   --card-w: 96px;
-  --card-h: 56px;
+  --card-h: 48px;
   --lift-hover: 4px;
   --lift-active: 10px;
   --spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -204,7 +204,7 @@ button, input, select, textarea { font-family: inherit; }
   position: relative;
   flex: 0 0 var(--card-w, 96px);
   width: var(--card-w, 96px);
-  height: var(--card-h, 56px);
+  height: var(--card-h, 48px);
   padding: 0;
   border: none;
   background: transparent;
@@ -1004,7 +1004,7 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
 
   .mood-library {
     --card-w: calc((100vw - var(--gap) * 2 - 64px) / 9);
-    --card-h: 56px;
+    --card-h: 48px;
   }
 
   .mood-cartridge-label {
