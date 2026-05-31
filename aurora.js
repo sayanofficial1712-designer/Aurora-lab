@@ -492,8 +492,10 @@ function buildMoodVault() {
 
     card.innerHTML = `
       <div class="mood-cartridge-glow" style="--mood-glow:${moodCardGlowStyle(moodId)}"></div>
-      <div class="mood-cartridge-body" style="${moodCardGradientStyle(moodId)}">
-        <span class="mood-cartridge-label">${mood.label}</span>
+      <div class="mood-cartridge-shell">
+        <div class="mood-cartridge-surface" style="${moodCardGradientStyle(moodId)}">
+          <span class="mood-cartridge-label">${mood.label}</span>
+        </div>
       </div>
     `;
 
