@@ -136,7 +136,7 @@ button, input, select, textarea { font-family: inherit; }
   color: var(--text-muted);
 }
 
-/* Mood vault — macOS Dock emergence from cassette holder */
+/* Mood vault — glass display shelf */
 .mood-vault-wrap {
   position: fixed;
   bottom: var(--gap);
@@ -148,7 +148,7 @@ button, input, select, textarea { font-family: inherit; }
   align-items: center;
   gap: 10px;
   width: min(1000px, calc(100vw - var(--gap) * 2));
-  padding-top: 18px;
+  padding-top: 14px;
 }
 
 .mood-mode {
@@ -179,33 +179,34 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-/* Cassette holder — vault overlaps lower cartridge portion */
+/* Glass display shelf */
 .mood-vault-case {
-  --cartridge-h: 56px;
-  --vault-h: 76px;
-  --vault-pad-x: 14px;
+  --cartridge-w: 76px;
+  --cartridge-h: 92px;
+  --vault-h: 108px;
+  --vault-pad-x: 16px;
   --vault-pad-b: 10px;
-  --emerge-hover: calc(var(--cartridge-h) * 0.22);
-  --emerge-active: calc(var(--cartridge-h) * 0.30);
-  --scale-hover: 1.03;
-  --scale-active: 1.05;
-  --vault-lip: calc(var(--vault-h) * 0.58);
+  --lift-hover: 8px;
+  --lift-active: 12px;
+  --scale-hover: 1.02;
+  --scale-active: 1.04;
   --spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 0;
   width: 100%;
   max-width: 1000px;
   height: var(--vault-h);
   padding: 0 var(--vault-pad-x) var(--vault-pad-b);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
   overflow-x: clip;
   overflow-y: visible;
 }
@@ -213,32 +214,11 @@ button, input, select, textarea { font-family: inherit; }
 .mood-vault-case::before {
   content: '';
   position: absolute;
-  inset: 5px 16px auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 42%);
   pointer-events: none;
-  z-index: 7;
-}
-
-/* Frosted lip — vault sits in front of lower cartridge portion */
-.mood-vault-case::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--vault-lip);
-  border-radius: 0 0 20px 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 18%,
-    rgba(255, 255, 255, 0.16) 100%
-  );
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  pointer-events: none;
-  z-index: 5;
+  z-index: 1;
 }
 
 .mood-vault-slot {
@@ -249,6 +229,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  position: relative;
   z-index: 2;
 }
 
@@ -267,17 +248,17 @@ button, input, select, textarea { font-family: inherit; }
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  height: var(--cartridge-h, 56px);
-  padding: 0 2px;
+  height: var(--cartridge-h, 92px);
+  padding: 0;
 }
 
-/* Cartridges — baseline at rest; emerge upward from vault floor */
+/* Collectible mood cartridges */
 .mood-cartridge {
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 92px;
-  height: var(--cartridge-h, 56px);
+  max-width: var(--cartridge-w, 76px);
+  height: var(--cartridge-h, 92px);
   padding: 0;
   border: none;
   background: transparent;
@@ -285,7 +266,7 @@ button, input, select, textarea { font-family: inherit; }
   transform: translateY(0) scale(1);
   transition: transform var(--spring, 0.28s cubic-bezier(0.34, 1.56, 0.64, 1));
   -webkit-tap-highlight-color: transparent;
-  z-index: 3;
+  z-index: 2;
   transform-origin: center bottom;
 }
 
@@ -294,18 +275,18 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 @keyframes cartridge-spring {
-  0% { transform: translateY(calc(-1 * var(--emerge-active, 17px))) scale(var(--scale-active, 1.05)); }
-  45% { transform: translateY(calc(-1 * var(--emerge-active, 17px) - 2px)) scale(1.06); }
-  100% { transform: translateY(calc(-1 * var(--emerge-active, 17px))) scale(var(--scale-active, 1.05)); }
+  0% { transform: translateY(calc(-1 * var(--lift-active, 12px))) scale(var(--scale-active, 1.04)); }
+  45% { transform: translateY(calc(-1 * var(--lift-active, 12px) - 2px)) scale(1.05); }
+  100% { transform: translateY(calc(-1 * var(--lift-active, 12px))) scale(var(--scale-active, 1.04)); }
 }
 
 .mood-cartridge:hover:not(.is-active) {
-  transform: translateY(calc(-1 * var(--emerge-hover, 12px))) scale(var(--scale-hover, 1.03));
-  z-index: 4;
+  transform: translateY(calc(-1 * var(--lift-hover, 8px))) scale(var(--scale-hover, 1.02));
+  z-index: 3;
 }
 
 .mood-cartridge.is-active {
-  transform: translateY(calc(-1 * var(--emerge-active, 17px))) scale(var(--scale-active, 1.05));
+  transform: translateY(calc(-1 * var(--lift-active, 12px))) scale(var(--scale-active, 1.04));
   z-index: 4;
 }
 
@@ -313,19 +294,19 @@ button, input, select, textarea { font-family: inherit; }
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 6px 16px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   transition:
-    background var(--spring, 0.28s) ease,
-    border-color var(--spring, 0.28s) ease,
-    box-shadow var(--spring, 0.28s) ease;
+    box-shadow var(--spring, 0.28s) ease,
+    border-color var(--spring, 0.28s) ease;
 }
 
 .mood-cartridge-body::after {
@@ -333,46 +314,52 @@ button, input, select, textarea { font-family: inherit; }
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 36%);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, transparent 38%);
   pointer-events: none;
 }
 
-.mood-cartridge:hover .mood-cartridge-body,
-.mood-cartridge.is-active .mood-cartridge-body {
-  background: rgba(255, 255, 255, 0.24);
-  border-color: rgba(255, 255, 255, 0.32);
+.mood-cartridge:hover .mood-cartridge-body {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.44),
-    0 3px 8px rgba(40, 40, 55, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 4px 10px rgba(0, 0, 0, 0.08),
+    0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.mood-cartridge.is-active .mood-cartridge-body {
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 6px 14px rgba(0, 0, 0, 0.1),
+    0 12px 28px rgba(0, 0, 0, 0.07);
 }
 
 .mood-cartridge-band {
   position: relative;
   z-index: 1;
-  height: 12px;
+  height: 20px;
   flex-shrink: 0;
-  border-radius: 10px 10px 0 0;
-  opacity: 0.9;
+  border-radius: 12px 12px 0 0;
 }
 
 .mood-cartridge-glow {
   position: absolute;
-  inset: 0;
-  border-radius: 11px;
+  inset: -4px -2px auto;
+  height: calc(100% + 8px);
+  border-radius: 14px;
   background: var(--mood-glow);
   opacity: 0;
-  filter: blur(8px);
+  filter: blur(14px);
   transition: opacity var(--spring, 0.28s) ease;
   pointer-events: none;
   z-index: -1;
 }
 
 .mood-cartridge:hover .mood-cartridge-glow {
-  opacity: 0.12;
+  opacity: 0.2;
 }
 
 .mood-cartridge.is-active .mood-cartridge-glow {
-  opacity: 0.18;
+  opacity: 0.38;
 }
 
 .mood-cartridge-label {
@@ -382,28 +369,19 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px 3px;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  padding: 0 5px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-transform: none;
   text-align: center;
-  line-height: 1.15;
-  color: rgba(32, 32, 40, 0.62);
+  line-height: 1.2;
+  color: rgba(28, 28, 36, 0.72);
 }
 
 .mood-cartridge:hover .mood-cartridge-label,
 .mood-cartridge.is-active .mood-cartridge-label {
-  color: rgba(32, 32, 40, 0.78);
-}
-
-.mood-cartridge[data-tone="light"] .mood-cartridge-label {
-  color: rgba(248, 250, 252, 0.72);
-}
-
-.mood-cartridge[data-tone="light"]:hover .mood-cartridge-label,
-.mood-cartridge[data-tone="light"].is-active .mood-cartridge-label {
-  color: rgba(248, 250, 252, 0.9);
+  color: rgba(28, 28, 36, 0.88);
 }
 
 .vault-micro-label {
@@ -1126,8 +1104,8 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-vault-case {
-    --vault-h: 74px;
-    --vault-pad-x: 10px;
+    --vault-h: 104px;
+    --vault-pad-x: 12px;
     height: var(--vault-h);
   }
 
@@ -1144,15 +1122,12 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-vault-case {
-    --vault-h: 72px;
+    --cartridge-h: 88px;
+    --vault-h: 100px;
     --vault-pad-x: 8px;
     --vault-pad-b: 8px;
     height: var(--vault-h);
     border-radius: 20px;
-  }
-
-  .mood-vault-case::after {
-    border-radius: 0 0 18px 18px;
   }
 
   .mood-card-row {
@@ -1160,7 +1135,8 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
   }
 
   .mood-cartridge-label {
-    font-size: 10px;
+    font-size: 9px;
+    padding: 0 3px 8px;
   }
 
   .vault-micro-label {

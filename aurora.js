@@ -458,18 +458,26 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-function cartridgeBandStyle(mood) {
-  const [c0, c1, c2] = mood.palette;
-  return `background:linear-gradient(135deg, ${c0} 0%, ${c1} 52%, ${c2} 100%)`;
+const CARTRIDGE_STRIPS = {
+  dreamy: ['#B8A4E8', '#F5B4C8'],
+  electric: ['#22D3EE', '#8B5CF6'],
+  cozy: ['#FFF1E0', '#F0A8B8'],
+  mellow: ['#B0BEC8', '#E8EEF2'],
+  bold: ['#F472B6', '#9333EA'],
+  memory_lane: ['#E2D4BC', '#F7EFE3'],
+  midnight: ['#1E3A5F', '#3B82F6'],
+  indie: ['#2F6B4F', '#6EE7B7'],
+  bollywood: ['#FB923C', '#DB2777'],
+};
+
+function cartridgeBandStyle(moodId) {
+  const strip = CARTRIDGE_STRIPS[moodId] || CARTRIDGE_STRIPS.dreamy;
+  return `background:linear-gradient(90deg, ${strip[0]} 0%, ${strip[1]} 100%)`;
 }
 
-function cartridgeLabelTone(mood) {
-  const hex = (mood.palette[2] || mood.palette[0]).replace('#', '');
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum < 0.48 ? 'light' : 'dark';
+function cartridgeGlowStyle(moodId) {
+  const strip = CARTRIDGE_STRIPS[moodId] || CARTRIDGE_STRIPS.dreamy;
+  return `linear-gradient(160deg, ${strip[0]}, ${strip[1]})`;
 }
 
 function updateVaultScrollState() {
@@ -506,14 +514,13 @@ function buildMoodVault() {
     card.type = 'button';
     card.className = 'mood-cartridge';
     card.dataset.mood = moodId;
-    card.dataset.tone = cartridgeLabelTone(mood);
     card.setAttribute('role', 'listitem');
     card.setAttribute('aria-label', `${mood.label} mood`);
 
     card.innerHTML = `
-      <div class="mood-cartridge-glow" style="--mood-glow:${mood.glow}"></div>
+      <div class="mood-cartridge-glow" style="--mood-glow:${cartridgeGlowStyle(moodId)}"></div>
       <div class="mood-cartridge-body">
-        <div class="mood-cartridge-band" style="${cartridgeBandStyle(mood)}"></div>
+        <div class="mood-cartridge-band" style="${cartridgeBandStyle(moodId)}"></div>
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
@@ -557,7 +564,7 @@ function closeControls() {
 function updateMoodGlow(moodId, colors) {
   const mood = MOODS[moodId];
   if (!mood) return;
-  const glow = window.AuroraMoods.paletteGlow(colors || mood.colors);
+  const glow = cartridgeGlowStyle(toLibraryMood(moodId));
   document.querySelectorAll(`.mood-cartridge[data-mood="${moodId}"] .mood-cartridge-glow`).forEach((el) => {
     el.style.setProperty('--mood-glow', glow);
   });
