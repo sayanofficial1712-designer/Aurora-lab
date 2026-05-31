@@ -139,7 +139,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Mood library — floating gradient cards */
 .mood-library {
   --card-w: 96px;
-  --card-h: 42px;
+  --card-h: 56px;
   --lift-hover: 8px;
   --lift-active: 14px;
   --spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -204,7 +204,7 @@ button, input, select, textarea { font-family: inherit; }
   position: relative;
   flex: 0 0 var(--card-w, 96px);
   width: var(--card-w, 96px);
-  height: var(--card-h, 42px);
+  height: var(--card-h, 56px);
   padding: 0;
   border: none;
   background: transparent;
@@ -335,15 +335,15 @@ button, input, select, textarea { font-family: inherit; }
   letter-spacing: 0;
   text-align: left;
   line-height: 1.2;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  color: rgba(0, 0, 0, 0.88);
 }
 
-.mood-cartridge[data-mood="cozy"] .mood-cartridge-label,
-.mood-cartridge[data-mood="mellow"] .mood-cartridge-label,
-.mood-cartridge[data-mood="memory_lane"] .mood-cartridge-label {
-  color: rgba(255, 255, 255, 0.88);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+.mood-cartridge[data-mood="electric"] .mood-cartridge-label,
+.mood-cartridge[data-mood="midnight"] .mood-cartridge-label,
+.mood-cartridge[data-mood="indie"] .mood-cartridge-label,
+.mood-cartridge[data-mood="bollywood"] .mood-cartridge-label {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Soundtrack cards (legacy — used by Spotify stack if present) */
@@ -1067,7 +1067,7 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
 
   .mood-library {
     --card-w: calc((100vw - var(--gap) * 2 - 64px) / 9);
-    --card-h: 42px;
+    --card-h: 56px;
   }
 
   .mood-cartridge-label {
