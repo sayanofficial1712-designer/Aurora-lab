@@ -138,8 +138,8 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Mood library — floating gradient cards */
 .mood-library {
-  --card-w: 80px;
-  --card-h: 96px;
+  --card-w: 96px;
+  --card-h: 42px;
   --lift-hover: 8px;
   --lift-active: 14px;
   --spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -202,9 +202,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .mood-cartridge {
   position: relative;
-  flex: 0 0 var(--card-w, 80px);
-  width: var(--card-w, 80px);
-  height: var(--card-h, 96px);
+  flex: 0 0 var(--card-w, 96px);
+  width: var(--card-w, 96px);
+  height: var(--card-h, 42px);
   padding: 0;
   border: none;
   background: transparent;
@@ -251,6 +251,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transition: box-shadow var(--spring, 0.28s) ease;
 }
@@ -293,12 +294,11 @@ button, input, select, textarea { font-family: inherit; }
 .mood-cartridge-label {
   position: relative;
   z-index: 1;
-  padding: 12px 8px 0;
-  font-size: 13px;
+  padding: 0 10px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: left;
+  letter-spacing: 0;
+  text-align: center;
   line-height: 1.2;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
@@ -1032,16 +1032,13 @@ body.spotify-connected .capsule-disconnect { display: inline-block; }
 
   .mood-library {
     --card-w: calc((100vw - var(--gap) * 2 - 64px) / 9);
-  }
-
-  .mood-cartridge {
-    height: calc(var(--card-w, 80px) * 1.2);
+    --card-h: 42px;
   }
 
   .mood-cartridge-label {
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    padding: 8px 5px 0;
+    font-size: 12px;
+    letter-spacing: 0;
+    padding: 0 6px;
   }
 }
 
