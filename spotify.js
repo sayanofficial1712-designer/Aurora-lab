@@ -153,6 +153,16 @@ async function _fetchCurrentTrack(token) {
   return text ? JSON.parse(text) : null;
 }
 
+async function _fetchPlayer(token) {
+  const resp = await fetch('https://api.spotify.com/v1/me/player', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (resp.status === 204) return null;
+  if (!resp.ok) return null;
+  const text = await resp.text();
+  return text ? JSON.parse(text) : null;
+}
+
 // Spotify deprecated /audio-features for new apps (403). We use genre-based mapping only.
 
 async function _fetchTrack(token, trackId) {
@@ -177,6 +187,8 @@ async function _fetchArtist(token, artistId) {
 let _isPlaying = false;
 let _isPremium = true; // updated from control responses
 let _premiumRestrictionDetected = false;
+let _shuffleState = false;
+let _repeatState = 'off';
 
 function _showControlFeedback(msg, isError = false) {
   const el = document.getElementById('playbackMsg');
@@ -239,6 +251,46 @@ async function _skipPrev() {
   if (resp) {
     _lastTrackId = null;
     setTimeout(_poll, 1000);
+  }
+}
+
+function _updateModeButtonsUI() {
+  document.querySelectorAll('[data-mode="shuffle"]').forEach((btn) => {
+    btn.classList.toggle('is-active', _shuffleState);
+    btn.setAttribute('aria-pressed', String(_shuffleState));
+  });
+  document.querySelectorAll('[data-mode="repeat"]').forEach((btn) => {
+    const active = _repeatState !== 'off';
+    btn.classList.toggle('is-active', active);
+    btn.classList.toggle('is-repeat-one', _repeatState === 'track');
+    btn.setAttribute('aria-pressed', String(active));
+  });
+}
+
+async function _syncPlaybackModes(token) {
+  const player = await _fetchPlayer(token);
+  if (!player) return;
+  _shuffleState = !!player.shuffle_state;
+  _repeatState = player.repeat_state || 'off';
+  _updateModeButtonsUI();
+}
+
+async function _toggleShuffle() {
+  const next = !_shuffleState;
+  const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/shuffle?state=${next}`);
+  if (resp) {
+    _shuffleState = next;
+    _updateModeButtonsUI();
+  }
+}
+
+async function _toggleRepeat() {
+  const cycle = { off: 'context', context: 'track', track: 'off' };
+  const next = cycle[_repeatState] || 'context';
+  const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/repeat?state=${next}`);
+  if (resp) {
+    _repeatState = next;
+    _updateModeButtonsUI();
   }
 }
 
@@ -631,6 +683,7 @@ async function _loadTrackAndApplyMood(token, track) {
 async function _poll() {
   try {
     const token = await _getToken();
+    await _syncPlaybackModes(token);
     const data = await _fetchCurrentTrack(token);
 
     if (!data || !data.item) {
@@ -757,7 +810,7 @@ function _computeConfidence(features, mood) {
 }
 
 function _setArtOnElements(artUrl, trackName) {
-  const ids = ['playerCover', 'capsuleArt', 'vinylArt'];
+  const ids = ['playerCover', 'capsuleArt'];
   ids.forEach((id) => {
     const el = document.getElementById(id);
     if (!el || !artUrl) return;
@@ -773,7 +826,7 @@ function _setArtOnElements(artUrl, trackName) {
 }
 
 function _clearArtElements() {
-  ['playerCover', 'capsuleArt', 'vinylArt'].forEach((id) => {
+  ['playerCover', 'capsuleArt'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.removeAttribute('src');
@@ -814,7 +867,6 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 
   _isPlaying = isPlaying;
   _updatePlayPauseUI();
-  if (isPlaying) _expandCapsule();
 
   if (playbackData) {
     _syncProgressFromSpotify(playbackData.progress_ms || 0, track.duration_ms || 0);
@@ -918,10 +970,25 @@ document.querySelectorAll('#playPauseBtn, #playPauseBtnExpanded').forEach((btn) 
     _playPause();
   });
 });
-document.getElementById('nextBtn')?.addEventListener('click', _skipNext);
-document.getElementById('prevBtn')?.addEventListener('click', _skipPrev);
-document.getElementById('repeatBtn')?.addEventListener('click', () => {
-  _showControlFeedback('Repeat toggled on device');
+document.getElementById('nextBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _skipNext();
+});
+document.getElementById('prevBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _skipPrev();
+});
+document.querySelectorAll('[data-mode="shuffle"]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _toggleShuffle();
+  });
+});
+document.querySelectorAll('[data-mode="repeat"]').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    _toggleRepeat();
+  });
 });
 
 // Search
@@ -1137,15 +1204,12 @@ if (_generateSoundtrackBtn) {
 
 // ─── Music capsule expand / collapse ───
 const _musicCapsule = document.getElementById('musicCapsule');
-const _capsuleCollapsed = document.getElementById('capsuleCollapsed');
-let _capsuleCollapseTimer = null;
 
 function _expandCapsule() {
   if (!_musicCapsule) return;
   _musicCapsule.classList.add('is-expanded');
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
-  _resetCapsuleCollapseTimer();
 }
 
 function _collapseCapsule() {
@@ -1155,28 +1219,9 @@ function _collapseCapsule() {
   if (expanded) expanded.hidden = true;
 }
 
-function _resetCapsuleCollapseTimer() {
-  clearTimeout(_capsuleCollapseTimer);
-  _capsuleCollapseTimer = setTimeout(_collapseCapsule, 8000);
-}
-
 if (_musicCapsule) {
   _musicCapsule.addEventListener('mouseenter', _expandCapsule);
   _musicCapsule.addEventListener('focusin', _expandCapsule);
-  _musicCapsule.addEventListener('mouseleave', () => {
-    if (!_isPlaying) _collapseCapsule();
-    else _resetCapsuleCollapseTimer();
-  });
-  _musicCapsule.addEventListener('click', (e) => {
-    if (e.target.closest('.player-btn, .capsule-search-input, .spotify-connect-btn, .capsule-disconnect, .search-results')) return;
-    _expandCapsule();
-  });
-}
-
-if (_capsuleCollapsed) {
-  _capsuleCollapsed.addEventListener('click', (e) => {
-    if (e.target.closest('.play-pause')) return;
-    _expandCapsule();
-  });
+  _musicCapsule.addEventListener('mouseleave', _collapseCapsule);
 }
 
