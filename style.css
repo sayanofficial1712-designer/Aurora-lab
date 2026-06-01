@@ -971,7 +971,12 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.35s ease, transform 0.35s ease, color 0.35s ease;
+  transition:
+    background 0.35s ease,
+    transform 0.35s ease,
+    color 0.35s ease,
+    opacity 0.25s ease,
+    visibility 0.25s ease;
   box-shadow: var(--glass-shadow);
   pointer-events: auto;
 }
@@ -983,8 +988,10 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
 }
 
 .controls-panel-wrap.is-open .controls-toggle {
-  opacity: 0.35;
+  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+  transform: scale(0.85);
 }
 
 .controls-panel {
