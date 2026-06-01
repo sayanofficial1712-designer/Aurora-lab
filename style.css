@@ -360,6 +360,10 @@ button, input, select, textarea { font-family: inherit; }
   --capsule-collapsed-h: 124px;
 }
 
+.music-capsule.is-expanded {
+  height: var(--capsule-expanded-h);
+}
+
 .capsule-collapsed {
   display: flex;
   flex-direction: column;
