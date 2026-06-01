@@ -363,9 +363,9 @@ button, input, select, textarea { font-family: inherit; }
 .capsule-collapsed {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  padding: 14px 16px 16px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
 }
@@ -464,7 +464,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 16px 16px;
+  padding: 14px 16px;
   height: var(--capsule-expanded-h);
 }
 
@@ -775,19 +775,23 @@ body.spotify-connected .spotify-connect-btn { display: none; }
 
 .capsule-disconnect {
   display: none;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 500;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--text-active);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 2px 0;
+  transition: background 0.22s ease, border-color 0.22s ease;
 }
 
-body.spotify-connected .capsule-disconnect { display: inline-block; }
+body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: center; justify-content: center; }
 
 .capsule-disconnect:hover {
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(255, 255, 255, 0.44);
 }
 
 .capsule-status {
