@@ -1152,22 +1152,22 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   justify-content: center;
   width: 100%;
   margin-top: 4px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(29, 185, 84, 0.35);
-  background: rgba(29, 185, 84, 0.14);
-  color: rgba(18, 120, 60, 0.92);
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.24);
+  color: rgba(58, 58, 66, 0.78);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  transition: background 0.22s ease, border-color 0.22s ease, color 0.22s ease;
 }
 
 .reset-default-btn:hover {
-  background: rgba(29, 185, 84, 0.22);
-  border-color: rgba(29, 185, 84, 0.5);
-  color: rgba(12, 100, 48, 0.98);
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(255, 255, 255, 0.44);
+  color: rgba(48, 48, 56, 0.88);
 }
 
 .share-btn {
