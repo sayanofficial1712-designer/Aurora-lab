@@ -340,7 +340,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Music Capsule */
 .music-capsule {
-  --capsule-collapsed-h: 118px;
+  --capsule-collapsed-h: 108px;
   --capsule-expanded-h: 520px;
 
   position: fixed;
@@ -356,18 +356,19 @@ button, input, select, textarea { font-family: inherit; }
   height: var(--capsule-collapsed-h);
 }
 
-.music-capsule.is-expanded {
-  height: var(--capsule-expanded-h);
+.music-capsule:has(.capsule-mini-art.loaded) {
+  --capsule-collapsed-h: 124px;
 }
 
 .capsule-collapsed {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 14px 16px;
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .music-capsule.is-expanded .capsule-collapsed {
@@ -421,10 +422,21 @@ button, input, select, textarea { font-family: inherit; }
   background: linear-gradient(135deg, #f5c8f6, #dcceff);
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.5s ease, width 0.3s ease, height 0.3s ease, margin 0.3s ease;
 }
 
-.capsule-mini-art.loaded { opacity: 1; }
+.capsule-mini-art:not(.loaded) {
+  width: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.capsule-mini-art.loaded {
+  opacity: 1;
+  width: 44px;
+  height: 44px;
+}
 
 .capsule-mini-info {
   flex: 1;
