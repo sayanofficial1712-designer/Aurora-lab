@@ -660,10 +660,6 @@ async function _loadTrackAndApplyMood(token, track) {
   const libMood = typeof window.toLibraryMood === 'function' ? window.toLibraryMood(mood) : mood;
   const confidence = _computeConfidence(features, libMood);
 
-  if (typeof window.setMoodConfidence === 'function') {
-    window.setMoodConfidence(confidence);
-  }
-
   console.log('%c[Aurora × Spotify] ✓ Mood detected', 'color:#1DB954;font-weight:bold', {
     track: features._track,
     mood,
@@ -880,8 +876,18 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 }
 
 function _announceMood(mood, track, confidence = 0) {
+  const libMood = typeof window.toLibraryMood === 'function' ? window.toLibraryMood(mood) : mood;
+
+  if (typeof window.applySpotifyDetectedMood === 'function') {
+    window.applySpotifyDetectedMood(libMood, confidence);
+    return;
+  }
+
   if (typeof window.setMoodConfidence === 'function') {
     window.setMoodConfidence(confidence);
+  }
+  if (typeof window.applyMoodVisuals === 'function') {
+    window.applyMoodVisuals(libMood, 850);
   }
 }
 

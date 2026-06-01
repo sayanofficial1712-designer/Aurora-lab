@@ -441,6 +441,28 @@ function setMoodConfidence(percent) {
   moodConfidence = Math.max(0, Math.min(100, percent));
 }
 
+function applySpotifyDetectedMood(moodId, confidence = 0) {
+  const libId = toLibraryMood(moodId);
+  const mood = MOODS[libId];
+  if (!mood) return;
+
+  setMoodConfidence(confidence);
+
+  if (activeMood !== libId) {
+    applyMoodVisuals(libId, 850);
+  } else {
+    syncMoodChipAppearance();
+  }
+
+  const chip = document.querySelector(`.mood-cartridge[data-mood="${libId}"]`);
+  if (chip) {
+    chip.classList.add('is-picked');
+    setTimeout(() => chip.classList.remove('is-picked'), 480);
+  }
+}
+
+window.applySpotifyDetectedMood = applySpotifyDetectedMood;
+
 function clearActiveMood() {
   activeMood = null;
   document.querySelectorAll('.mood-cartridge').forEach((card) => card.classList.remove('is-active'));
