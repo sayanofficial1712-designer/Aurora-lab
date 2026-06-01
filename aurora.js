@@ -562,7 +562,6 @@ function closeControls() {
   controlsPanelWrap?.classList.remove('is-open');
   controlsPanel?.setAttribute('aria-hidden', 'true');
   controlsToggle?.setAttribute('aria-expanded', 'false');
-  if (typeof window.scheduleUiImmersion === 'function') window.scheduleUiImmersion();
 }
 
 function updateMoodGlow(moodId, colors) {

@@ -111,7 +111,7 @@ body.ui-dimmed .music-capsule,
 body.ui-dimmed .controls-panel-wrap {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(6px);
+  transform: translateY(8px);
 }
 
 body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
@@ -173,7 +173,7 @@ body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
   align-items: center;
   width: max-content;
   max-width: calc(100vw - var(--gap) * 2);
-  gap: 12px;
+  gap: 20px;
   pointer-events: none;
 }
 
@@ -185,6 +185,7 @@ body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
   align-items: center;
   gap: 4px;
   max-width: 420px;
+  margin-bottom: 2px;
 }
 
 .mood-library-title {
@@ -200,9 +201,11 @@ body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
   font-weight: 400;
   color: rgba(40, 40, 52, 0.58);
   line-height: 1.4;
+  margin-bottom: 4px;
 }
 
 .mood-library .mood-card-row {
+  margin-top: 4px;
   pointer-events: auto;
 }
 
