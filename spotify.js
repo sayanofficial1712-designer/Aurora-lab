@@ -144,13 +144,16 @@ async function _getToken() {
 // Spotify API calls
 // ─────────────────────────────────────────────────────────────
 async function _fetchCurrentTrack(token) {
-  const resp = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (resp.status === 204 || resp.status === 200 && resp.headers.get('content-length') === '0') return null;
-  if (!resp.ok) throw new Error(`Spotify API ${resp.status}`);
-  const text = await resp.text();
-  return text ? JSON.parse(text) : null;
+  const player = await _fetchPlayer(token);
+  if (!player?.item) return null;
+  return {
+    item: player.item,
+    is_playing: player.is_playing,
+    progress_ms: player.progress_ms,
+    device: player.device,
+    shuffle_state: player.shuffle_state,
+    repeat_state: player.repeat_state,
+  };
 }
 
 async function _fetchPlayer(token) {
@@ -241,8 +244,8 @@ async function _playPause() {
 async function _skipNext() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/next');
   if (resp) {
-    _lastTrackId = null; // force mood re-detect on next poll
-    setTimeout(_poll, 1000);
+    _lastTrackId = null;
+    _scheduleTrackMoodRefresh();
   }
 }
 
@@ -250,7 +253,7 @@ async function _skipPrev() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/previous');
   if (resp) {
     _lastTrackId = null;
-    setTimeout(_poll, 1000);
+    _scheduleTrackMoodRefresh();
   }
 }
 
@@ -302,7 +305,7 @@ async function _playTrackUri(uri, trackName, options = {}) {
     if (!options.keepSearch) _hideSearchResults();
     const searchInput = document.getElementById('searchInput');
     if (searchInput && !options.keepSearch) searchInput.value = '';
-    setTimeout(_poll, 1000);
+    _scheduleTrackMoodRefresh();
   }
 }
 
@@ -622,13 +625,13 @@ const _ARTIST_HINTS = {
 function _inferMoodHint(genres, text, artistNames) {
   // 1. Title/album keyword check first
   const titleHint = _TITLE_HINTS.find((hint) => hint.match.test(text));
-  if (titleHint) return titleHint.mood;
+  if (titleHint) return { mood: titleHint.mood, source: 'title' };
 
   // 2. Known artist names (most reliable since genre API is sparse)
   for (const name of (artistNames || [])) {
     const lower = name.toLowerCase();
     for (const [key, mood] of Object.entries(_ARTIST_HINTS)) {
-      if (lower.includes(key)) return mood;
+      if (lower.includes(key)) return { mood, source: 'artist' };
     }
   }
 
@@ -637,28 +640,28 @@ function _inferMoodHint(genres, text, artistNames) {
   if (!genreText) return null;
 
   if (/(edm|electronic|house|techno|trance|dubstep|drum.?and.?bass|dnb|dance.?pop|electro|club)/i.test(genreText)) {
-    return 'electric';
+    return { mood: 'electric', source: 'genre' };
   }
   if (/(rock|metal|punk|hardcore|k-pop|j-pop|anime|latin|reggaeton|afrobeat|hip.?hop|rap|trap|drill|pop)/i.test(genreText)) {
-    return 'bold';
+    return { mood: 'bold', source: 'genre' };
   }
   if (/(folk|acoustic|singer.?songwriter|blues|indie.?folk)/i.test(genreText)) {
-    return 'memory_lane';
+    return { mood: 'memory_lane', source: 'genre' };
   }
   if (/(bollywood|filmi|desi|hindi|punjabi pop|bhangra)/i.test(genreText)) {
-    return 'bollywood';
+    return { mood: 'bollywood', source: 'genre' };
   }
   if (/(indie|alternative|indie.?rock|indie.?pop)/i.test(genreText)) {
-    return 'indie';
+    return { mood: 'indie', source: 'genre' };
   }
   if (/(ambient|chill|lofi|lo-fi|new.?age|downtempo|sleep|classical|orchestral|piano|baroque|opera)/i.test(genreText)) {
-    return 'mellow';
+    return { mood: 'mellow', source: 'genre' };
   }
   if (/(synthwave|trip.?hop|dark.?ambient)/i.test(genreText)) {
-    return 'midnight';
+    return { mood: 'midnight', source: 'genre' };
   }
   if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
-    return 'cozy';
+    return { mood: 'cozy', source: 'genre' };
   }
 
   return null;
@@ -687,7 +690,7 @@ async function _deriveFeatures(token, track) {
   const artistNames = (fullTrack.artists || []).map((a) => a.name);
   const genreMatch = _GENRE_PROFILES.find((p) => genres.some((g) => p.match.test(g)));
   const titleMatch = _TITLE_HINTS.find((p) => p.match.test(searchText));
-  const moodHint = _inferMoodHint(genres, searchText, artistNames);
+  const moodHintResult = _inferMoodHint(genres, searchText, artistNames);
 
   let base = genreMatch || { energy: 0.55, valence: 0.55, tempo: 110, danceability: 0.6, acousticness: 0.4 };
   if (titleMatch) {
@@ -734,9 +737,10 @@ async function _deriveFeatures(token, track) {
     tempo,
     danceability,
     acousticness,
-    _source: genreMatch ? `genre:${genres[0] || 'matched'}` : titleMatch ? 'title-hint' : 'default',
+    _source: genreMatch ? `genre:${genres[0] || 'matched'}` : titleMatch ? 'title-hint' : moodHintResult ? `hint:${moodHintResult.source}` : 'default',
     _genres: genres,
-    _moodHint: moodHint,
+    _moodHint: moodHintResult?.mood || null,
+    _moodHintSource: moodHintResult?.source || null,
     _track: fullTrack.name,
   };
 }
@@ -746,6 +750,48 @@ async function _deriveFeatures(token, track) {
 // ─────────────────────────────────────────────────────────────
 let _pollInterval = null;
 let _lastTrackId = null;
+let _moodRefreshTimers = [];
+
+function _trackKey(track) {
+  if (!track) return null;
+  if (track.id) return track.id;
+  const artist = track.artists?.[0]?.name || '';
+  return `${track.name}::${artist}`;
+}
+
+function _scheduleTrackMoodRefresh() {
+  _moodRefreshTimers.forEach(clearTimeout);
+  _moodRefreshTimers = [400, 1200, 2500].map((delay) =>
+    setTimeout(() => _refreshTrackAndMood(true), delay)
+  );
+}
+
+async function _refreshTrackAndMood(forceMood = false) {
+  if (!window.spotifyState?.connected) return;
+  try {
+    const token = await _getToken();
+    const data = await _fetchCurrentTrack(token);
+    if (!data?.item) return;
+
+    if (data.shuffle_state != null) _shuffleState = !!data.shuffle_state;
+    if (data.repeat_state) _repeatState = data.repeat_state;
+    _updateModeButtonsUI();
+
+    _setTrackDisplay(data.item, data.is_playing !== false, data);
+
+    const trackKey = _trackKey(data.item);
+    if (!trackKey) return;
+
+    if (forceMood || trackKey !== _lastTrackId) {
+      _lastTrackId = trackKey;
+      console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
+        `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
+      await _loadTrackAndApplyMood(token, data.item);
+    }
+  } catch (err) {
+    console.warn('[Aurora × Spotify] refresh track/mood:', err.message);
+  }
+}
 
 async function _loadTrackAndApplyMood(token, track) {
   const features = await _deriveFeatures(token, track);
@@ -761,6 +807,7 @@ async function _loadTrackAndApplyMood(token, track) {
     libraryMood: libMood,
     confidence: `${confidence}%`,
     moodHint: features._moodHint || '(numeric fallback)',
+    hintSource: features._moodHintSource || '(none)',
     source: features._source,
     genres: features._genres.length ? features._genres.slice(0, 4) : '(none — artist lookup used)',
     energy: +features.energy.toFixed(2),
@@ -777,7 +824,6 @@ async function _loadTrackAndApplyMood(token, track) {
 async function _poll() {
   try {
     const token = await _getToken();
-    await _syncPlaybackModes(token);
     const data = await _fetchCurrentTrack(token);
 
     if (!data || !data.item) {
@@ -785,10 +831,17 @@ async function _poll() {
       return;
     }
 
+    if (data.shuffle_state != null) {
+      _shuffleState = !!data.shuffle_state;
+      _repeatState = data.repeat_state || 'off';
+      _updateModeButtonsUI();
+    }
+
     _setTrackDisplay(data.item, data.is_playing !== false, data);
 
-    if (data.item.id !== _lastTrackId) {
-      _lastTrackId = data.item.id;
+    const trackKey = _trackKey(data.item);
+    if (trackKey && trackKey !== _lastTrackId) {
+      _lastTrackId = trackKey;
       console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
         `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
       await _loadTrackAndApplyMood(token, data.item);
@@ -870,10 +923,17 @@ function _scoreMood(features, moodId) {
 
 function _scoreAllMoods(features) {
   const scores = {};
+  const hint = features._moodHint
+    ? window.AuroraMoods.toLibraryMood(features._moodHint)
+    : null;
+  const hintBoost = features._moodHintSource === 'artist' ? 0.28
+    : features._moodHintSource === 'title' ? 0.22
+    : hint ? 0.16
+    : 0;
+
   for (const moodId of _LIBRARY_MOOD_IDS) {
     let score = _scoreMood(features, moodId);
-    const hint = window.AuroraMoods.toLibraryMood(features._moodHint);
-    if (hint === moodId) score += 0.08;
+    if (hint === moodId) score += hintBoost;
     scores[moodId] = score;
   }
   return scores;
@@ -889,6 +949,15 @@ function _detectMood(features) {
       best = moodId;
     }
   }
+
+  if (features._moodHint) {
+    const hintId = window.AuroraMoods.toLibraryMood(features._moodHint);
+    const hintScore = scores[hintId] ?? 0;
+    if (hintScore >= bestScore - 0.12) {
+      best = hintId;
+    }
+  }
+
   features._moodScores = scores;
   return best;
 }
@@ -1005,13 +1074,15 @@ async function _connect(token) {
   _showControlFeedback('Controlling your Spotify session');
   console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
   await _poll();
-  _pollInterval = setInterval(_poll, 4000);
+  _pollInterval = setInterval(_poll, 2500);
 }
 
 function _disconnect() {
   window.spotifyState.connected = false;
   clearInterval(_pollInterval);
   _pollInterval = null;
+  _moodRefreshTimers.forEach(clearTimeout);
+  _moodRefreshTimers = [];
   _lastTrackId = null;
   _isPremium = true;
   _premiumRestrictionDetected = false;

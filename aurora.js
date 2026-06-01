@@ -447,11 +447,12 @@ function applySpotifyDetectedMood(moodId, confidence = 0) {
   if (!mood) return;
 
   setMoodConfidence(confidence);
+  const moodChanged = activeMood !== libId;
 
-  if (activeMood !== libId) {
+  if (moodChanged) {
     applyMoodVisuals(libId, 850);
   } else {
-    syncMoodChipAppearance();
+    setActiveMood(libId);
   }
 
   const chip = document.querySelector(`.mood-cartridge[data-mood="${libId}"]`);

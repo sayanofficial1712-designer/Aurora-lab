@@ -554,11 +554,11 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: vinylBreath 4s ease-in-out infinite;
+  animation: vinylBreath 6s ease-in-out infinite;
 }
 
 body.spotify-connected .music-capsule.is-playing .vinyl-disc {
-  animation: vinylSpin 4s linear infinite;
+  animation: vinylSpin 12s linear infinite;
 }
 
 @keyframes vinylBreath {
@@ -589,7 +589,7 @@ body.spotify-connected .music-capsule.is-playing .vinyl-disc {
   border-radius: 4px;
   transform-origin: 100% 50%;
   transform: rotate(-30deg);
-  transition: transform 0.55s ease;
+  transition: transform 0.85s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   pointer-events: none;
 }
