@@ -1004,7 +1004,7 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   padding: 18px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   overflow-y: auto;
   opacity: 0;
   transform: translateY(12px) scale(0.96);
@@ -1022,13 +1022,17 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 2px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .controls-header h2 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-active);
+  line-height: 1.2;
 }
 
 .controls-close {
@@ -1038,6 +1042,7 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.35);
   font-size: 18px;
+  line-height: 1;
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -1045,49 +1050,56 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
 .controls-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 20px;
-  margin-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  gap: 10px;
+  padding-top: 18px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .controls-section:first-of-type {
   border-top: none;
-  padding-top: 4px;
+  padding-top: 6px;
   margin-top: 0;
 }
 
 .controls-heading {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(28, 28, 36, 0.72);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(40, 40, 52, 0.48);
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .control-label-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .control-group label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  color: rgba(22, 22, 28, 0.88);
+  line-height: 1.2;
 }
 
 .control-value {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  color: rgba(40, 40, 52, 0.52);
+  line-height: 1.2;
 }
 
 .control-group input[type="range"] {
@@ -1114,6 +1126,7 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 .color-pickers input[type="color"] {
@@ -1148,21 +1161,25 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
 
 .reset-default-btn {
   align-self: flex-start;
-  margin-top: -2px;
+  margin-top: 0;
   padding: 0;
   border: none;
   background: transparent;
-  color: rgba(58, 58, 66, 0.78);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: rgba(40, 40, 52, 0.52);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(40, 40, 52, 0.22);
   cursor: pointer;
-  transition: color 0.22s ease;
+  transition: color 0.22s ease, text-decoration-color 0.22s ease;
 }
 
 .reset-default-btn:hover {
-  color: rgba(48, 48, 56, 0.88);
+  color: rgba(22, 22, 28, 0.78);
+  text-decoration-color: rgba(22, 22, 28, 0.35);
 }
 
 .share-btn {
@@ -1170,9 +1187,9 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--text-active);
   background: rgba(255, 255, 255, 0.35);
   border: 1px solid var(--glass-border);
