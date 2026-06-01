@@ -59,7 +59,8 @@
       constraints: { valenceMin: 0.55, energyMax: 0.55, acousticnessMin: 0.35 },
       soundtrack: {
         genres: ['dream-pop', 'indie', 'ambient'],
-        searches: ['dream pop ethereal', 'indie ambient floating', 'soft dream pop playlist'],
+        artists: ['Lana Del Rey', 'Harry Styles', 'Clairo'],
+        searches: ['Lana Del Rey Summertime Sadness', 'Harry Styles As It Was', 'dream pop hits'],
         target_energy: 0.38,
         target_valence: 0.72,
         target_tempo: 92,
@@ -80,7 +81,8 @@
       constraints: { energyMin: 0.75, tempoMin: 118, danceabilityMin: 0.65 },
       soundtrack: {
         genres: ['edm', 'hyperpop', 'dance'],
-        searches: ['electric dance hyperpop', 'high energy edm', 'neon club playlist'],
+        artists: ['Avicii', 'Calvin Harris', 'The Chainsmokers'],
+        searches: ['Avicii Wake Me Up', 'Calvin Harris Feel So Close', 'edm hits'],
         target_energy: 0.88,
         target_valence: 0.72,
         target_tempo: 132,
@@ -101,7 +103,8 @@
       constraints: { acousticnessMin: 0.4, tempoMax: 112, valenceMin: 0.55 },
       soundtrack: {
         genres: ['acoustic', 'lo-fi', 'indie-pop'],
-        searches: ['cozy acoustic lofi', 'soft pink morning playlist', 'light feather acoustic'],
+        artists: ['Norah Jones', 'John Mayer', 'Ed Sheeran'],
+        searches: ['Norah Jones Come Away With Me', 'John Mayer Gravity', 'acoustic hits'],
         target_energy: 0.32,
         target_valence: 0.72,
         target_tempo: 96,
@@ -122,7 +125,8 @@
       constraints: { energyMax: 0.35, acousticnessMin: 0.55, tempoMax: 100 },
       soundtrack: {
         genres: ['ambient', 'classical', 'piano'],
-        searches: ['mellow instrumental minimal', 'peaceful ambient piano', 'soft unhurried playlist'],
+        artists: ['Adele', 'Sam Smith', 'Billie Eilish'],
+        searches: ['Adele Someone Like You', 'Sam Smith Stay With Me', 'mellow pop ballads'],
         target_energy: 0.22,
         target_valence: 0.52,
         target_tempo: 78,
@@ -143,7 +147,8 @@
       constraints: { energyMin: 0.65, danceabilityMin: 0.55 },
       soundtrack: {
         genres: ['pop', 'rock', 'hip-hop'],
-        searches: ['bold pop anthem', 'confident pop hits', 'dramatic anthem playlist'],
+        artists: ['Taylor Swift', 'The Weeknd', 'Dua Lipa'],
+        searches: ['Taylor Swift Shake It Off', 'The Weeknd Blinding Lights', 'pop hits 2024'],
         target_energy: 0.78,
         target_valence: 0.58,
         target_tempo: 118,
@@ -164,7 +169,8 @@
       constraints: { valenceMin: 0.4, valenceMax: 0.72, acousticnessMin: 0.35 },
       soundtrack: {
         genres: ['soft-rock', 'indie', 'synth-pop'],
-        searches: ['90s nostalgic soft rock', 'retro memories playlist', 'childhood throwback indie'],
+        artists: ['Oasis', 'Coldplay', 'Bruno Mars'],
+        searches: ['Oasis Wonderwall', 'Coldplay Yellow', '90s hits'],
         target_energy: 0.42,
         target_valence: 0.55,
         target_tempo: 95,
@@ -185,7 +191,8 @@
       constraints: { energyMax: 0.45, valenceMax: 0.55, tempoMax: 105 },
       soundtrack: {
         genres: ['dark-ambient', 'synthwave', 'trip-hop'],
-        searches: ['midnight dark ambient', 'late night drive synth', 'night introspective playlist'],
+        artists: ['The Weeknd', 'Frank Ocean', 'Billie Eilish'],
+        searches: ['The Weeknd Starboy', 'Frank Ocean Thinkin Bout You', 'late night pop'],
         target_energy: 0.28,
         target_valence: 0.35,
         target_tempo: 82,
@@ -206,7 +213,8 @@
       constraints: { acousticnessMin: 0.3, energyMin: 0.3, energyMax: 0.65 },
       soundtrack: {
         genres: ['indie', 'alternative', 'indie-rock'],
-        searches: ['indie alternative playlist', 'indian indie rock', 'bedroom indie gems'],
+        artists: ['Arctic Monkeys', 'Tame Impala', 'Prateek Kuhad'],
+        searches: ['Arctic Monkeys Do I Wanna Know', 'Tame Impala The Less I Know', 'indie rock hits'],
         target_energy: 0.48,
         target_valence: 0.58,
         target_tempo: 102,
@@ -227,7 +235,8 @@
       constraints: { energyMin: 0.55, valenceMin: 0.55, danceabilityMin: 0.5 },
       soundtrack: {
         genres: ['bollywood', 'desi', 'filmi'],
-        searches: ['bollywood hits playlist', 'hindi film songs', 'desi dance party'],
+        artists: ['Arijit Singh', 'Shreya Ghoshal', 'Pritam'],
+        searches: ['Arijit Singh Kesariya', 'Shreya Ghoshal Agar Tum Saath Ho', 'bollywood hits'],
         target_energy: 0.72,
         target_valence: 0.78,
         target_tempo: 112,

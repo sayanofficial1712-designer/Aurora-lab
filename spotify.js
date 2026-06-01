@@ -1278,36 +1278,75 @@ const _soundtrackStack = document.getElementById('soundtrackStack');
 const _generateSoundtrackBtn = document.getElementById('generateSoundtrackBtn');
 let _soundtrackLoading = false;
 
-async function _collectTracksForMood(token, moodId, limit = 8) {
-  const cfg = _MOOD_SOUNDTRACK[moodId];
-  if (!cfg) return [];
+async function _searchTracksForMood(token, query, limit = 10) {
+  const resp = await fetch(
+    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.tracks?.items || [];
+}
 
-  const [recTracks, ...searchBatches] = await Promise.all([
-    _fetchRecommendations(token, moodId),
-    ...cfg.searches.map((q) => _searchTracksForMood(token, q, 4)),
-  ]);
+async function _searchArtistTracks(token, artistName, limit = 6) {
+  return _searchTracksForMood(token, `artist:"${artistName}"`, limit);
+}
 
+function _mergeUniqueTracks(tracks) {
   const seen = new Set();
   const merged = [];
-  for (const track of [...recTracks, ...searchBatches.flat()]) {
+  for (const track of tracks) {
     if (!track?.id || seen.has(track.id)) continue;
     seen.add(track.id);
     merged.push(track);
-    if (merged.length >= limit) break;
   }
-
-  if (merged.length < 3) {
-    const label = window.AuroraMoods?.MOODS?.[moodId]?.label || moodId;
-    const fallback = await _searchTracksForMood(token, `${label} mood playlist`, 5);
-    for (const track of fallback) {
-      if (!track?.id || seen.has(track.id)) continue;
-      seen.add(track.id);
-      merged.push(track);
-      if (merged.length >= limit) break;
-    }
-  }
-
   return merged;
+}
+
+function _sortTracksByPopularity(tracks) {
+  return [...tracks].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+}
+
+function _pickPopularTrack(tracks) {
+  if (!tracks.length) return null;
+
+  const sorted = _sortTracksByPopularity(tracks);
+  const wellKnown = sorted.filter((t) => (t.popularity ?? 0) >= 45);
+  const pool = (wellKnown.length >= 3 ? wellKnown : sorted).slice(0, 8);
+
+  // Favor top hits, with slight variety in the top tier
+  const weights = pool.map((_, i) => Math.max(1, 8 - i));
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  let roll = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return pool[i];
+  }
+  return pool[0];
+}
+
+async function _collectTracksForMood(token, moodId, limit = 24) {
+  const cfg = _MOOD_SOUNDTRACK[moodId];
+  if (!cfg) return [];
+
+  const artistQueries = (cfg.artists || []).map((name) => _searchArtistTracks(token, name, 8));
+  const searchQueries = (cfg.searches || []).map((q) => _searchTracksForMood(token, q, 8));
+
+  const batches = await Promise.all([
+    _fetchRecommendations(token, moodId),
+    ...artistQueries,
+    ...searchQueries,
+  ]);
+
+  let merged = _mergeUniqueTracks(batches.flat());
+
+  if (merged.length < 5) {
+    const label = window.AuroraMoods?.MOODS?.[moodId]?.label || moodId;
+    const fallback = await _searchTracksForMood(token, `${label} hits`, 10);
+    merged = _mergeUniqueTracks([...merged, ...fallback]);
+  }
+
+  return _sortTracksByPopularity(merged).slice(0, limit);
 }
 
 async function _playMoodSoundtrack(moodId) {
@@ -1326,7 +1365,12 @@ async function _playMoodSoundtrack(moodId) {
       return;
     }
 
-    const track = tracks[Math.floor(Math.random() * tracks.length)];
+    const track = _pickPopularTrack(tracks);
+    if (!track) {
+      _showControlFeedback(`No tracks found for ${moodLabel}`, true);
+      return;
+    }
+
     await _playTrackUri(track.uri, track.name, {
       fromMoodSelection: true,
       moodId: libMood,
@@ -1359,16 +1403,6 @@ function _clearSoundtrackStack() {
   if (_soundtrackStack) _soundtrackStack.innerHTML = '';
 }
 window.clearSoundtrackStack = _clearSoundtrackStack;
-
-async function _searchTracksForMood(token, query, limit = 5) {
-  const resp = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  return data.tracks?.items || [];
-}
 
 async function _fetchRecommendations(token, moodId) {
   const cfg = _MOOD_SOUNDTRACK[moodId];
