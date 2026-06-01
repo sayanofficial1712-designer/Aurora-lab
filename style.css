@@ -185,7 +185,7 @@ body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
   align-items: center;
   gap: 4px;
   max-width: 420px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 .mood-library-title {
@@ -201,11 +201,11 @@ body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
   font-weight: 400;
   color: rgba(40, 40, 52, 0.58);
   line-height: 1.4;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .mood-library .mood-card-row {
-  margin-top: 4px;
+  margin-top: 18px;
   pointer-events: auto;
 }
 
