@@ -534,7 +534,7 @@ function buildMoodVault() {
 
     card.addEventListener('click', (e) => {
       e.preventDefault();
-      selectMoodCard(moodId, { lock: true });
+      selectMoodCard(moodId);
       card.classList.add('is-picked');
       setTimeout(() => card.classList.remove('is-picked'), 480);
       if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
