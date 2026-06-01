@@ -97,6 +97,28 @@ button, input, select, textarea { font-family: inherit; }
 
 .app-shell > * { pointer-events: auto; }
 
+/* UI chrome — fade during immersed playback */
+.top-bar,
+.mood-library,
+.music-capsule,
+.controls-panel-wrap {
+  transition: opacity 0.85s ease, transform 0.85s ease;
+}
+
+body.ui-dimmed .top-bar,
+body.ui-dimmed .mood-library,
+body.ui-dimmed .music-capsule,
+body.ui-dimmed .controls-panel-wrap {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+}
+
+body.ui-dimmed .controls-panel-wrap.is-open .controls-panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Top bar */
 .top-bar {
   position: fixed;
@@ -1235,4 +1257,18 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
 @media (prefers-reduced-motion: reduce) {
   .vinyl-disc,
   .mood-cartridge { animation: none !important; transition-duration: 0.01ms; }
+
+  .top-bar,
+  .mood-library,
+  .music-capsule,
+  .controls-panel-wrap {
+    transition-duration: 0.01ms;
+  }
+
+  body.ui-dimmed .top-bar,
+  body.ui-dimmed .mood-library,
+  body.ui-dimmed .music-capsule,
+  body.ui-dimmed .controls-panel-wrap {
+    transform: none;
+  }
 }

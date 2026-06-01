@@ -335,6 +335,12 @@ function _updatePlayPauseUI() {
   });
   const capsule = document.getElementById('musicCapsule');
   if (capsule) capsule.classList.toggle('is-playing', _isPlaying);
+
+  if (_isPlaying) {
+    _scheduleUiImmersion();
+  } else {
+    _clearUiImmersion();
+  }
 }
 
 // ─── Progress bar ───
@@ -1143,6 +1149,7 @@ function _disconnect() {
   localStorage.removeItem('aurora_spotify_expiry');
   _setConnectedUI(false);
   _setTrackDisplay(null);
+  _clearUiImmersion();
   const feedback = document.getElementById('playbackMsg');
   if (feedback) feedback.textContent = '';
 }
@@ -1528,6 +1535,7 @@ function _expandCapsule() {
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
   _syncCapsuleToggleState();
+  _wakeUiChrome();
 }
 
 function _collapseCapsule() {
@@ -1537,6 +1545,7 @@ function _collapseCapsule() {
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = true;
   _syncCapsuleToggleState();
+  _scheduleUiImmersion();
 }
 
 _capsuleExpandBtn?.addEventListener('click', (e) => {
@@ -1551,3 +1560,55 @@ _capsuleCollapseBtn?.addEventListener('click', (e) => {
 
 _syncCapsuleToggleState();
 
+// ─── UI immersion — dim chrome while music plays, wake on cursor ───
+const UI_IDLE_MS = 4500;
+let _uiIdleTimer = null;
+
+function _canUiDim() {
+  if (!window.spotifyState?.connected || !_isPlaying) return false;
+  const capsule = document.getElementById('musicCapsule');
+  if (capsule?.classList.contains('is-expanded')) return false;
+  if (capsule?.classList.contains('is-search-open')) return false;
+  if (document.querySelector('.controls-panel-wrap.is-open')) return false;
+  return true;
+}
+
+function _setUiDimmed(on) {
+  document.body.classList.toggle('ui-dimmed', on);
+}
+
+function _clearUiImmersion() {
+  clearTimeout(_uiIdleTimer);
+  _uiIdleTimer = null;
+  _setUiDimmed(false);
+}
+
+function _wakeUiChrome() {
+  _setUiDimmed(false);
+  _scheduleUiImmersion();
+}
+
+function _scheduleUiImmersion() {
+  clearTimeout(_uiIdleTimer);
+  if (!_canUiDim()) {
+    _setUiDimmed(false);
+    return;
+  }
+  _uiIdleTimer = setTimeout(() => {
+    if (_canUiDim()) _setUiDimmed(true);
+  }, UI_IDLE_MS);
+}
+
+function _initUiImmersion() {
+  const wake = () => _wakeUiChrome();
+  document.addEventListener('mousemove', wake, { passive: true });
+  document.addEventListener('mousedown', wake, { passive: true });
+  document.addEventListener('keydown', wake, { passive: true });
+  document.addEventListener('touchstart', wake, { passive: true });
+  document.addEventListener('scroll', wake, { passive: true });
+}
+
+window.wakeUiChrome = _wakeUiChrome;
+window.scheduleUiImmersion = _scheduleUiImmersion;
+
+_initUiImmersion();

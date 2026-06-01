@@ -555,12 +555,14 @@ function openControls() {
   controlsPanelWrap?.classList.add('is-open');
   controlsPanel?.setAttribute('aria-hidden', 'false');
   controlsToggle?.setAttribute('aria-expanded', 'true');
+  if (typeof window.wakeUiChrome === 'function') window.wakeUiChrome();
 }
 
 function closeControls() {
   controlsPanelWrap?.classList.remove('is-open');
   controlsPanel?.setAttribute('aria-hidden', 'true');
   controlsToggle?.setAttribute('aria-expanded', 'false');
+  if (typeof window.scheduleUiImmersion === 'function') window.scheduleUiImmersion();
 }
 
 function updateMoodGlow(moodId, colors) {
