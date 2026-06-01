@@ -407,12 +407,39 @@ function updateSliderLabels() {
   if (sliderValueLabels.intensity) sliderValueLabels.intensity.textContent = intensitySlider.value;
 }
 
+function syncMoodChipAppearance() {
+  document.querySelectorAll('.mood-cartridge').forEach((card) => {
+    const surface = card.querySelector('.mood-cartridge-surface');
+    const label = card.querySelector('.mood-cartridge-label');
+    if (!surface) return;
+
+    if (card.classList.contains('is-active')) {
+      const c0 = card.dataset.chipC0;
+      const c1 = card.dataset.chipC1;
+      surface.style.background = `linear-gradient(165deg, ${c0} 0%, ${c1} 100%)`;
+      surface.style.borderColor = 'rgba(255, 255, 255, 0.34)';
+      surface.style.boxShadow = `0 12px 32px ${card.dataset.chipShadow}, 0 2px 8px rgba(0, 0, 0, 0.06)`;
+      if (label) {
+        label.style.color = card.dataset.chipLight === 'true'
+          ? 'rgba(255, 255, 255, 0.92)'
+          : 'rgba(20, 20, 20, 0.72)';
+      }
+    } else {
+      surface.style.background = '';
+      surface.style.borderColor = '';
+      surface.style.boxShadow = '';
+      if (label) label.style.color = '';
+    }
+  });
+}
+
 function setActiveMood(moodId) {
   const libId = toLibraryMood(moodId);
   activeMood = libId;
   document.querySelectorAll('.mood-cartridge').forEach((card) => {
     card.classList.toggle('is-active', card.dataset.mood === libId);
   });
+  syncMoodChipAppearance();
 }
 
 function setMoodConfidence(percent) {
@@ -422,6 +449,7 @@ function setMoodConfidence(percent) {
 function clearActiveMood() {
   activeMood = null;
   document.querySelectorAll('.mood-cartridge').forEach((card) => card.classList.remove('is-active'));
+  syncMoodChipAppearance();
 }
 
 function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
@@ -455,6 +483,26 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
+function hexToRgba(hex, alpha = 1) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function paletteNeedsLightText(c0, c1) {
+  function luminance(hex) {
+    const h = hex.replace('#', '');
+    const channels = [0, 2, 4].map((i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  }
+  return (luminance(c0) + luminance(c1)) / 2 < 0.45;
+}
+
 function buildMoodVault() {
   if (!moodVaultTrack) return;
   moodVaultTrack.innerHTML = '';
@@ -467,6 +515,12 @@ function buildMoodVault() {
     card.dataset.mood = moodId;
     card.setAttribute('role', 'listitem');
     card.setAttribute('aria-label', `${mood.label} mood`);
+
+    const [c0, c1] = mood.palette;
+    card.dataset.chipC0 = c0;
+    card.dataset.chipC1 = c1;
+    card.dataset.chipShadow = hexToRgba(c1, 0.28);
+    if (paletteNeedsLightText(c0, c1)) card.dataset.chipLight = 'true';
 
     card.innerHTML = `
       <div class="mood-cartridge-surface">
@@ -493,6 +547,8 @@ function buildMoodVault() {
     if (!activeMood) return;
     applyMoodImmediate(activeMood, { updateActive: false });
   });
+
+  syncMoodChipAppearance();
 }
 
 function openControls() {

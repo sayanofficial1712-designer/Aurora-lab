@@ -280,13 +280,17 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .mood-cartridge.is-active .mood-cartridge-surface {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.14) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.38);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(165deg, var(--chip-c0) 0%, var(--chip-c1) 100%);
+  border-color: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  box-shadow:
+    0 12px 32px var(--chip-shadow, rgba(0, 0, 0, 0.08)),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.mood-cartridge.is-active .mood-cartridge-label {
+  color: var(--chip-label, rgba(20, 20, 20, 0.72));
 }
 
 .mood-cartridge-label {
