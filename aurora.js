@@ -270,8 +270,6 @@ const shareBtn = document.getElementById('shareBtn');
 const exportBtn = document.getElementById('exportBtn');
 const resetBtn = document.getElementById('resetBtn');
 const moodVaultTrack = document.getElementById('moodVaultTrack');
-const modeAutoBtn = document.getElementById('modeAutoBtn');
-const modeLockBtn = document.getElementById('modeLockBtn');
 const brandDot = document.querySelector('.brand-dot');
 const controlsToggle = document.getElementById('controlsToggle');
 const controlsCloseBtn = document.getElementById('controlsCloseBtn');
@@ -355,9 +353,6 @@ function lerpHex(a, b, t) {
   const bl = Math.round(lerp(ab, bb, t));
   return '#' + [r, g, bl].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
-
-window._auroraAutoMode = window._auroraAutoMode !== false;
-window._auroraManualLock = window._auroraManualLock === true;
 
 let activeMood = null;
 let moodConfidence = 0;
@@ -452,36 +447,17 @@ function clearActiveMood() {
   syncMoodChipAppearance();
 }
 
-function selectMoodCard(moodId, { lock = false, duration = 850 } = {}) {
+function selectMoodCard(moodId) {
   const libId = toLibraryMood(moodId);
   const mood = MOODS[libId];
   if (!mood) {
     console.warn('[Aurora] Unknown mood card:', moodId);
     return;
   }
-
-  if (lock) {
-    window._auroraManualLock = true;
-    window._auroraAutoMode = false;
-    if (modeLockBtn) modeLockBtn.classList.add('active');
-    if (modeAutoBtn) modeAutoBtn.classList.remove('active');
-    setMoodConfidence(0);
-  }
-
-  if (lock) {
-    applyMoodImmediate(libId);
-    updateLockMoodUI();
-  } else {
-    applyMoodVisuals(libId, duration);
-  }
-}
-
-function canAutoMoodDriveVisuals() {
-  return window._auroraAutoMode !== false && !window._auroraManualLock;
+  applyMoodImmediate(libId);
 }
 
 window.selectMoodCard = selectMoodCard;
-window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
 function hexToRgba(hex, alpha = 1) {
   const h = hex.replace('#', '');
@@ -537,7 +513,6 @@ function buildMoodVault() {
       selectMoodCard(moodId);
       card.classList.add('is-picked');
       setTimeout(() => card.classList.remove('is-picked'), 480);
-      if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
     });
 
     moodVaultTrack.appendChild(card);
@@ -570,8 +545,6 @@ function updateMoodGlow(moodId, colors) {
   }
 }
 
-function updateLockMoodUI() {}
-
 let _transitionToken = 0;
 
 function applyMoodImmediate(moodId, { updateActive = true } = {}) {
@@ -589,7 +562,6 @@ function applyMoodImmediate(moodId, { updateActive = true } = {}) {
   });
   if (updateActive) {
     setActiveMood(libId);
-    updateLockMoodUI();
     updateShareURL();
   }
   updateMoodGlow(libId, mood.colors);
@@ -617,7 +589,6 @@ function transitionToMood(moodId, duration = 850, { preview = false } = {}) {
   const myToken = ++_transitionToken;
   if (!preview) {
     setActiveMood(libId);
-    updateLockMoodUI();
   }
   _lastLoggedMood = null;
 
@@ -691,7 +662,6 @@ window.transitionToMood = (moodId, duration = 850) => applyMoodVisuals(moodId, d
 window.applyMoodVisuals = applyMoodVisuals;
 window.applyMoodImmediate = applyMoodImmediate;
 window.getActiveMood = () => activeMood;
-window.updateLockMoodUI = updateLockMoodUI;
 window.updateCenterStage = () => {};
 window.setStageTrack = () => {};
 
@@ -758,30 +728,6 @@ function bootAuroraUI() {
     setActiveMood('dreamy');
   }
   updateSliderLabels();
-
-  if (modeAutoBtn) {
-    modeAutoBtn.addEventListener('click', () => {
-      window._auroraAutoMode = true;
-      window._auroraManualLock = false;
-      modeAutoBtn.classList.add('active');
-      modeLockBtn.classList.remove('active');
-      updateLockMoodUI();
-      if (typeof window.clearSoundtrackStack === 'function') window.clearSoundtrackStack();
-      if (window.spotifyState?.connected && typeof window.refreshSpotifyMood === 'function') {
-        window.refreshSpotifyMood();
-      }
-    });
-  }
-
-  if (modeLockBtn) {
-    modeLockBtn.addEventListener('click', () => {
-      window._auroraAutoMode = false;
-      window._auroraManualLock = true;
-      modeLockBtn.classList.add('active');
-      modeAutoBtn.classList.remove('active');
-      updateLockMoodUI();
-    });
-  }
 
   if (controlsToggle) {
     controlsToggle.addEventListener('click', (e) => {
@@ -961,8 +907,6 @@ window.AuroraDebug = {
   getFrame: () => _renderFrame,
   getActiveMood: () => activeMood,
   getColors: () => _shaderColors.slice(),
-  getManualLock: () => window._auroraManualLock,
-  getAutoMode: () => window._auroraAutoMode,
   getSliders: () => ({
     flow: distortionSlider?.value,
     blur: speedSlider?.value,

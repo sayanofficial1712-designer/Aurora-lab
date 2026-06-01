@@ -625,13 +625,6 @@ async function _loadTrackAndApplyMood(token, track) {
     moodScores: features._moodScores,
   });
 
-  const autoOn = typeof window.canAutoMoodDriveVisuals === 'function'
-    ? window.canAutoMoodDriveVisuals()
-    : window._auroraAutoMode !== false && !window._auroraManualLock;
-  if (autoOn && typeof window.transitionToMood === 'function') {
-    window.transitionToMood(libMood, 900);
-  }
-
   _announceMood(libMood, track, confidence);
 }
 
@@ -832,7 +825,7 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 }
 
 function _announceMood(mood, track, confidence = 0) {
-  if (typeof window.setMoodConfidence === 'function' && !window._auroraManualLock) {
+  if (typeof window.setMoodConfidence === 'function') {
     window.setMoodConfidence(confidence);
   }
 }
@@ -973,9 +966,6 @@ if (_progressTrack) {
     _seekTo(pct * _durationMs);
   });
 }
-
-if (typeof window._auroraAutoMode === 'undefined') window._auroraAutoMode = true;
-if (typeof window._auroraManualLock === 'undefined') window._auroraManualLock = false;
 
 window.refreshSpotifyMood = async function refreshSpotifyMood() {
   if (!window.spotifyState?.connected) return;
