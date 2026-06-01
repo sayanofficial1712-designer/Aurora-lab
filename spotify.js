@@ -244,6 +244,8 @@ async function _playPause() {
 async function _skipNext() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/next');
   if (resp) {
+    _moodSelectionTrackId = null;
+    _moodSelectionMoodId = null;
     _lastMoodTrackKey = null;
     _scheduleTrackMoodRefresh();
   }
@@ -252,6 +254,8 @@ async function _skipNext() {
 async function _skipPrev() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/previous');
   if (resp) {
+    _moodSelectionTrackId = null;
+    _moodSelectionMoodId = null;
     _lastMoodTrackKey = null;
     _scheduleTrackMoodRefresh();
   }
@@ -298,14 +302,30 @@ async function _toggleRepeat() {
 }
 
 async function _playTrackUri(uri, trackName, options = {}) {
+  if (!options.fromMoodSelection) {
+    _moodSelectionTrackId = null;
+    _moodSelectionMoodId = null;
+  }
+
   const resp = await _controlFetch('PUT', 'https://api.spotify.com/v1/me/player/play', { uris: [uri] });
   if (resp) {
-    _showControlFeedback(`Playing ${trackName || 'track'}`);
-    _lastMoodTrackKey = null;
+    if (options.fromMoodSelection && options.trackId) {
+      _moodSelectionTrackId = options.trackId;
+      _moodSelectionMoodId = options.moodId || null;
+      _lastMoodTrackKey = options.trackId;
+      _forceNextMoodDetect = false;
+    } else {
+      _lastMoodTrackKey = null;
+      _scheduleTrackMoodRefresh();
+    }
+
+    if (!options.fromMoodSelection) {
+      _showControlFeedback(`Playing ${trackName || 'track'}`);
+    }
+
     if (!options.keepSearch) _hideSearchResults();
     const searchInput = document.getElementById('searchInput');
     if (searchInput && !options.keepSearch) searchInput.value = '';
-    _scheduleTrackMoodRefresh();
   }
 }
 
@@ -752,6 +772,10 @@ let _pollInterval = null;
 let _lastMoodTrackKey = null;
 let _moodRefreshTimers = [];
 let _forceNextMoodDetect = false;
+let _moodSelectionTrackId = null;
+let _moodSelectionMoodId = null;
+let _moodPlayTimer = null;
+let _moodPlayToken = 0;
 
 function _trackKey(track) {
   if (!track) return null;
@@ -790,6 +814,11 @@ async function _syncPlaybackFromData(data, { forceMood = false } = {}) {
 
   const trackKey = _trackKey(data.item);
   if (!trackKey) return;
+
+  if (_moodSelectionTrackId && trackKey !== _moodSelectionTrackId) {
+    _moodSelectionTrackId = null;
+    _moodSelectionMoodId = null;
+  }
 
   const shouldDetect = forceMood
     || _forceNextMoodDetect
@@ -1104,6 +1133,9 @@ function _disconnect() {
   _moodRefreshTimers = [];
   _lastMoodTrackKey = null;
   _forceNextMoodDetect = false;
+  _moodSelectionTrackId = null;
+  _moodSelectionMoodId = null;
+  clearTimeout(_moodPlayTimer);
   _isPremium = true;
   _premiumRestrictionDetected = false;
   localStorage.removeItem('aurora_spotify_token');
@@ -1246,6 +1278,83 @@ const _soundtrackStack = document.getElementById('soundtrackStack');
 const _generateSoundtrackBtn = document.getElementById('generateSoundtrackBtn');
 let _soundtrackLoading = false;
 
+async function _collectTracksForMood(token, moodId, limit = 8) {
+  const cfg = _MOOD_SOUNDTRACK[moodId];
+  if (!cfg) return [];
+
+  const [recTracks, ...searchBatches] = await Promise.all([
+    _fetchRecommendations(token, moodId),
+    ...cfg.searches.map((q) => _searchTracksForMood(token, q, 4)),
+  ]);
+
+  const seen = new Set();
+  const merged = [];
+  for (const track of [...recTracks, ...searchBatches.flat()]) {
+    if (!track?.id || seen.has(track.id)) continue;
+    seen.add(track.id);
+    merged.push(track);
+    if (merged.length >= limit) break;
+  }
+
+  if (merged.length < 3) {
+    const label = window.AuroraMoods?.MOODS?.[moodId]?.label || moodId;
+    const fallback = await _searchTracksForMood(token, `${label} mood playlist`, 5);
+    for (const track of fallback) {
+      if (!track?.id || seen.has(track.id)) continue;
+      seen.add(track.id);
+      merged.push(track);
+      if (merged.length >= limit) break;
+    }
+  }
+
+  return merged;
+}
+
+async function _playMoodSoundtrack(moodId) {
+  const libMood = window.AuroraMoods?.toLibraryMood?.(moodId) ?? moodId;
+  if (!window.spotifyState?.connected) return;
+  if (_soundtrackLoading) return;
+
+  _soundtrackLoading = true;
+  const moodLabel = window.AuroraMoods?.MOODS?.[libMood]?.label || libMood;
+
+  try {
+    const token = await _getToken();
+    const tracks = await _collectTracksForMood(token, libMood);
+    if (!tracks.length) {
+      _showControlFeedback(`No tracks found for ${moodLabel}`, true);
+      return;
+    }
+
+    const track = tracks[Math.floor(Math.random() * tracks.length)];
+    await _playTrackUri(track.uri, track.name, {
+      fromMoodSelection: true,
+      moodId: libMood,
+      trackId: track.id,
+    });
+    _showControlFeedback(`${moodLabel} · ${track.name}`);
+    _setTrackDisplay(track, true);
+  } catch (err) {
+    console.warn('[Aurora × Spotify] mood soundtrack error:', err.message);
+    _showControlFeedback('Could not play mood soundtrack', true);
+  } finally {
+    _soundtrackLoading = false;
+  }
+}
+
+function _scheduleMoodSoundtrack(moodId) {
+  const libMood = window.AuroraMoods?.toLibraryMood?.(moodId) ?? moodId;
+  const myToken = ++_moodPlayToken;
+  clearTimeout(_moodPlayTimer);
+  _moodPlayTimer = setTimeout(() => {
+    if (myToken !== _moodPlayToken) return;
+    _playMoodSoundtrack(libMood);
+  }, 400);
+}
+
+window.playMoodSoundtrack = _playMoodSoundtrack;
+window.scheduleMoodSoundtrack = _scheduleMoodSoundtrack;
+
 function _clearSoundtrackStack() {
   if (_soundtrackStack) _soundtrackStack.innerHTML = '';
 }
@@ -1306,32 +1415,9 @@ async function _generateSoundtrack() {
 
   try {
     const token = await _getToken();
-    const cfg = _MOOD_SOUNDTRACK[moodId];
-    const [recTracks, ...searchBatches] = await Promise.all([
-      _fetchRecommendations(token, moodId),
-      ...cfg.searches.map((q) => _searchTracksForMood(token, q, 3)),
-    ]);
+    const merged = await _collectTracksForMood(token, moodId, 5);
 
-    const seen = new Set();
-    const merged = [];
-    for (const track of [...recTracks, ...searchBatches.flat()]) {
-      if (!track?.id || seen.has(track.id)) continue;
-      seen.add(track.id);
-      merged.push(track);
-      if (merged.length >= 5) break;
-    }
-
-    if (merged.length < 3) {
-      const fallback = await _searchTracksForMood(token, `${moodId} mood music`, 5);
-      for (const track of fallback) {
-        if (!track?.id || seen.has(track.id)) continue;
-        seen.add(track.id);
-        merged.push(track);
-        if (merged.length >= 5) break;
-      }
-    }
-
-    _renderSoundtrackStack(merged.slice(0, 5), moodId);
+    _renderSoundtrackStack(merged, moodId);
     if (!merged.length) {
       _showControlFeedback('No tracks found — try another mood', true);
     }
@@ -1370,10 +1456,12 @@ function _renderSoundtrackStack(tracks, lockedMood) {
     `;
 
     card.addEventListener('click', async () => {
-      await _playTrackUri(track.uri, track.name, { keepSearch: true });
-      if (typeof window.applyMoodVisuals === 'function') {
-        window.applyMoodVisuals(lockedMood, 850);
-      }
+      await _playTrackUri(track.uri, track.name, {
+        keepSearch: true,
+        fromMoodSelection: true,
+        moodId: lockedMood,
+        trackId: track.id,
+      });
       if (typeof window.setMoodConfidence === 'function') {
         const features = await _deriveFeatures(await _getToken(), track);
         const score = _scoreMood(features, lockedMood);

@@ -477,6 +477,9 @@ function selectMoodCard(moodId) {
     return;
   }
   applyMoodImmediate(libId);
+  if (typeof window.scheduleMoodSoundtrack === 'function') {
+    window.scheduleMoodSoundtrack(libId);
+  }
 }
 
 window.selectMoodCard = selectMoodCard;
