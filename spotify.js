@@ -244,7 +244,7 @@ async function _playPause() {
 async function _skipNext() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/next');
   if (resp) {
-    _lastTrackId = null;
+    _lastMoodTrackKey = null;
     _scheduleTrackMoodRefresh();
   }
 }
@@ -252,7 +252,7 @@ async function _skipNext() {
 async function _skipPrev() {
   const resp = await _controlFetch('POST', 'https://api.spotify.com/v1/me/player/previous');
   if (resp) {
-    _lastTrackId = null;
+    _lastMoodTrackKey = null;
     _scheduleTrackMoodRefresh();
   }
 }
@@ -301,7 +301,7 @@ async function _playTrackUri(uri, trackName, options = {}) {
   const resp = await _controlFetch('PUT', 'https://api.spotify.com/v1/me/player/play', { uris: [uri] });
   if (resp) {
     _showControlFeedback(`Playing ${trackName || 'track'}`);
-    _lastTrackId = null;
+    _lastMoodTrackKey = null;
     if (!options.keepSearch) _hideSearchResults();
     const searchInput = document.getElementById('searchInput');
     if (searchInput && !options.keepSearch) searchInput.value = '';
@@ -749,8 +749,9 @@ async function _deriveFeatures(token, track) {
 // Polling loop
 // ─────────────────────────────────────────────────────────────
 let _pollInterval = null;
-let _lastTrackId = null;
+let _lastMoodTrackKey = null;
 let _moodRefreshTimers = [];
+let _forceNextMoodDetect = false;
 
 function _trackKey(track) {
   if (!track) return null;
@@ -760,10 +761,52 @@ function _trackKey(track) {
 }
 
 function _scheduleTrackMoodRefresh() {
+  _forceNextMoodDetect = true;
   _moodRefreshTimers.forEach(clearTimeout);
-  _moodRefreshTimers = [400, 1200, 2500].map((delay) =>
-    setTimeout(() => _refreshTrackAndMood(true), delay)
+  _moodRefreshTimers = [400, 1200, 2500, 4500].map((delay) =>
+    setTimeout(() => _refreshTrackAndMood(), delay)
   );
+}
+
+async function _applyMoodForTrack(token, track, trackKey) {
+  await _loadTrackAndApplyMood(token, track);
+  _lastMoodTrackKey = trackKey;
+  _forceNextMoodDetect = false;
+}
+
+async function _syncPlaybackFromData(data, { forceMood = false } = {}) {
+  if (!data?.item) {
+    _setTrackDisplay(null);
+    return;
+  }
+
+  if (data.shuffle_state != null) {
+    _shuffleState = !!data.shuffle_state;
+    _repeatState = data.repeat_state || 'off';
+    _updateModeButtonsUI();
+  }
+
+  _setTrackDisplay(data.item, data.is_playing !== false, data);
+
+  const trackKey = _trackKey(data.item);
+  if (!trackKey) return;
+
+  const shouldDetect = forceMood
+    || _forceNextMoodDetect
+    || trackKey !== _lastMoodTrackKey;
+
+  if (!shouldDetect) return;
+
+  const token = await _getToken();
+  console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
+    `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
+
+  try {
+    await _applyMoodForTrack(token, data.item, trackKey);
+  } catch (err) {
+    console.warn('[Aurora × Spotify] mood apply failed — will retry:', err.message);
+    _lastMoodTrackKey = null;
+  }
 }
 
 async function _refreshTrackAndMood(forceMood = false) {
@@ -771,23 +814,7 @@ async function _refreshTrackAndMood(forceMood = false) {
   try {
     const token = await _getToken();
     const data = await _fetchCurrentTrack(token);
-    if (!data?.item) return;
-
-    if (data.shuffle_state != null) _shuffleState = !!data.shuffle_state;
-    if (data.repeat_state) _repeatState = data.repeat_state;
-    _updateModeButtonsUI();
-
-    _setTrackDisplay(data.item, data.is_playing !== false, data);
-
-    const trackKey = _trackKey(data.item);
-    if (!trackKey) return;
-
-    if (forceMood || trackKey !== _lastTrackId) {
-      _lastTrackId = trackKey;
-      console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
-        `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
-      await _loadTrackAndApplyMood(token, data.item);
-    }
+    await _syncPlaybackFromData(data, { forceMood });
   } catch (err) {
     console.warn('[Aurora × Spotify] refresh track/mood:', err.message);
   }
@@ -825,27 +852,7 @@ async function _poll() {
   try {
     const token = await _getToken();
     const data = await _fetchCurrentTrack(token);
-
-    if (!data || !data.item) {
-      _setTrackDisplay(null);
-      return;
-    }
-
-    if (data.shuffle_state != null) {
-      _shuffleState = !!data.shuffle_state;
-      _repeatState = data.repeat_state || 'off';
-      _updateModeButtonsUI();
-    }
-
-    _setTrackDisplay(data.item, data.is_playing !== false, data);
-
-    const trackKey = _trackKey(data.item);
-    if (trackKey && trackKey !== _lastTrackId) {
-      _lastTrackId = trackKey;
-      console.log('%c[Aurora × Spotify] Track changed →', 'color:#1DB954;font-weight:bold',
-        `${data.item.name} · ${data.item.artists.map((a) => a.name).join(', ')}`);
-      await _loadTrackAndApplyMood(token, data.item);
-    }
+    await _syncPlaybackFromData(data);
   } catch (err) {
     console.warn('[Aurora × Spotify]', err.message);
     if (err.message.includes('Refresh failed')) _disconnect();
@@ -941,6 +948,15 @@ function _scoreAllMoods(features) {
 
 function _detectMood(features) {
   const scores = _scoreAllMoods(features);
+
+  if (features._moodHint && features._moodHintSource !== 'genre') {
+    const hintId = window.AuroraMoods.toLibraryMood(features._moodHint);
+    if (_LIBRARY_MOOD_IDS.includes(hintId)) {
+      features._moodScores = scores;
+      return hintId;
+    }
+  }
+
   let best = 'dreamy';
   let bestScore = -1;
   for (const [moodId, score] of Object.entries(scores)) {
@@ -1042,19 +1058,21 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 }
 
 function _announceMood(mood, track, confidence = 0) {
-  const libMood = typeof window.toLibraryMood === 'function' ? window.toLibraryMood(mood) : mood;
+  const libMood = window.AuroraMoods?.toLibraryMood?.(mood) ?? mood;
+  const label = window.AuroraMoods?.MOODS?.[libMood]?.label || libMood;
 
   if (typeof window.applySpotifyDetectedMood === 'function') {
     window.applySpotifyDetectedMood(libMood, confidence);
+  } else if (typeof window.applyMoodImmediate === 'function') {
+    window.applyMoodImmediate(libMood);
+  } else if (typeof window.applyMoodVisuals === 'function') {
+    window.applyMoodVisuals(libMood, 850);
+  } else {
+    console.warn('[Aurora × Spotify] No mood apply handler found on window');
     return;
   }
 
-  if (typeof window.setMoodConfidence === 'function') {
-    window.setMoodConfidence(confidence);
-  }
-  if (typeof window.applyMoodVisuals === 'function') {
-    window.applyMoodVisuals(libMood, 850);
-  }
+  _showControlFeedback(`Mood → ${label}`);
 }
 
 function _setConnectedUI(connected) {
@@ -1066,14 +1084,15 @@ function _setConnectedUI(connected) {
 // ─────────────────────────────────────────────────────────────
 async function _connect(token) {
   window.spotifyState.connected = true;
-  _lastTrackId = null;
+  _lastMoodTrackKey = null;
+  _forceNextMoodDetect = true;
   _isPremium = true;
   _premiumRestrictionDetected = false;
   _volumeSyncedFromSpotify = false;
   _setConnectedUI(true);
   _showControlFeedback('Controlling your Spotify session');
   console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
-  await _poll();
+  await _refreshTrackAndMood(true);
   _pollInterval = setInterval(_poll, 2500);
 }
 
@@ -1083,7 +1102,8 @@ function _disconnect() {
   _pollInterval = null;
   _moodRefreshTimers.forEach(clearTimeout);
   _moodRefreshTimers = [];
-  _lastTrackId = null;
+  _lastMoodTrackKey = null;
+  _forceNextMoodDetect = false;
   _isPremium = true;
   _premiumRestrictionDetected = false;
   localStorage.removeItem('aurora_spotify_token');
@@ -1210,16 +1230,9 @@ if (_volumeSlider) {
 
 window.refreshSpotifyMood = async function refreshSpotifyMood() {
   if (!window.spotifyState?.connected) return;
-  try {
-    const token = await _getToken();
-    const data = await _fetchCurrentTrack(token);
-    if (data?.item) {
-      _lastTrackId = null;
-      await _loadTrackAndApplyMood(token, data.item);
-    }
-  } catch (err) {
-    console.warn('[Aurora × Spotify] refresh mood failed:', err.message);
-  }
+  _lastMoodTrackKey = null;
+  _forceNextMoodDetect = true;
+  await _refreshTrackAndMood();
 };
 
 // ─────────────────────────────────────────────────────────────

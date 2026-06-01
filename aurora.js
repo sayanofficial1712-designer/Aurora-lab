@@ -444,16 +444,15 @@ function setMoodConfidence(percent) {
 function applySpotifyDetectedMood(moodId, confidence = 0) {
   const libId = toLibraryMood(moodId);
   const mood = MOODS[libId];
-  if (!mood) return;
+  if (!mood) {
+    console.warn('[Aurora] Spotify mood skipped — unknown mood:', moodId, '→', libId);
+    return;
+  }
 
   setMoodConfidence(confidence);
-  const moodChanged = activeMood !== libId;
+  applyMoodImmediate(libId);
 
-  if (moodChanged) {
-    applyMoodVisuals(libId, 850);
-  } else {
-    setActiveMood(libId);
-  }
+  console.log('[Aurora] Spotify mood applied →', libId, `(${confidence}%)`);
 
   const chip = document.querySelector(`.mood-cartridge[data-mood="${libId}"]`);
   if (chip) {
