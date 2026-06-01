@@ -151,7 +151,33 @@ button, input, select, textarea { font-family: inherit; }
   align-items: center;
   width: max-content;
   max-width: calc(100vw - var(--gap) * 2);
+  gap: 12px;
   pointer-events: none;
+}
+
+.mood-library-header {
+  pointer-events: none;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 420px;
+}
+
+.mood-library-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgba(22, 22, 28, 0.88);
+  line-height: 1.25;
+}
+
+.mood-library-subtext {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(40, 40, 52, 0.58);
+  line-height: 1.4;
 }
 
 .mood-library .mood-card-row {
