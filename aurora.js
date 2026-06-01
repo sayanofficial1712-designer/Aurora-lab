@@ -455,31 +455,6 @@ function canAutoMoodDriveVisuals() {
 window.selectMoodCard = selectMoodCard;
 window.canAutoMoodDriveVisuals = canAutoMoodDriveVisuals;
 
-const MOOD_GRADIENTS = {
-  dreamy: ['#B8A9E8', '#F5B8C8'],
-  electric: ['#22D3EE', '#4F46E5'],
-  cozy: ['#FFF4E6', '#F4A4B0'],
-  mellow: ['#A8B8C4', '#E2E8F0'],
-  bold: ['#F472B6', '#9333EA'],
-  memory_lane: ['#C4A882', '#F5EBD9'],
-  midnight: ['#0F2847', '#3B82F6'],
-  indie: ['#2D6A4F', '#6EE7B7'],
-  bollywood: ['#FB923C', '#DB2777'],
-};
-
-function moodShadowRgba(hex, alpha = 0.2) {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function moodCardSurfaceStyle(moodId) {
-  const [c0, c1] = MOOD_GRADIENTS[moodId] || MOOD_GRADIENTS.dreamy;
-  return `background:linear-gradient(165deg, ${c0} 0%, ${c1} 100%);--mood-shadow:${moodShadowRgba(c1, 0.2)}`;
-}
-
 function buildMoodVault() {
   if (!moodVaultTrack) return;
   moodVaultTrack.innerHTML = '';
@@ -494,7 +469,7 @@ function buildMoodVault() {
     card.setAttribute('aria-label', `${mood.label} mood`);
 
     card.innerHTML = `
-      <div class="mood-cartridge-surface" style="${moodCardSurfaceStyle(moodId)}">
+      <div class="mood-cartridge-surface">
         <span class="mood-cartridge-label">${mood.label}</span>
       </div>
     `;
@@ -533,14 +508,6 @@ function closeControls() {
 }
 
 function updateMoodGlow(moodId, colors) {
-  const libId = toLibraryMood(moodId);
-  const accent = colors?.[1] || MOOD_GRADIENTS[libId]?.[1];
-  if (accent) {
-    const shadow = moodShadowRgba(accent, 0.2);
-    document.querySelectorAll(`.mood-cartridge[data-mood="${libId}"] .mood-cartridge-surface`).forEach((el) => {
-      el.style.setProperty('--mood-shadow', shadow);
-    });
-  }
   if (brandDot && colors) {
     brandDot.style.background = `radial-gradient(circle at 30% 30%, ${colors[0]}, ${colors[1]} 45%, ${colors[2]} 90%)`;
     brandDot.style.boxShadow = `0 0 14px ${colors[0]}55`;
