@@ -129,11 +129,10 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .brand-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.9px;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  color: #0a0a0a;
 }
 
 /* Mood library — floating glass chips */
