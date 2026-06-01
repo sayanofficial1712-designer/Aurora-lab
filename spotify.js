@@ -810,7 +810,7 @@ function _computeConfidence(features, mood) {
 }
 
 function _setArtOnElements(artUrl, trackName) {
-  const ids = ['playerCover', 'capsuleArt'];
+  const ids = ['playerCover', 'capsuleArt', 'vinylArt'];
   ids.forEach((id) => {
     const el = document.getElementById(id);
     if (!el || !artUrl) return;
@@ -826,7 +826,7 @@ function _setArtOnElements(artUrl, trackName) {
 }
 
 function _clearArtElements() {
-  ['playerCover', 'capsuleArt'].forEach((id) => {
+  ['playerCover', 'capsuleArt', 'vinylArt'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.removeAttribute('src');
@@ -974,7 +974,15 @@ document.getElementById('nextBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   _skipNext();
 });
+document.getElementById('nextBtnMini')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _skipNext();
+});
 document.getElementById('prevBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _skipPrev();
+});
+document.getElementById('prevBtnMini')?.addEventListener('click', (e) => {
   e.stopPropagation();
   _skipPrev();
 });
