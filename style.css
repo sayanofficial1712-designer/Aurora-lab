@@ -339,7 +339,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Music Capsule */
 .music-capsule {
-  --capsule-collapsed-h: 108px;
+  --capsule-collapsed-h: 136px;
   --capsule-expanded-h: 520px;
 
   position: fixed;
@@ -356,7 +356,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .music-capsule:has(.capsule-mini-art.loaded) {
-  --capsule-collapsed-h: 124px;
+  --capsule-collapsed-h: 152px;
 }
 
 .music-capsule.is-expanded {
@@ -372,8 +372,8 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 14px 16px 12px;
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
   box-sizing: border-box;
@@ -672,6 +672,102 @@ body.spotify-connected .music-capsule.is-playing .vinyl-tonearm {
 
 .player-btn.play-pause.playing .icon-pause,
 .capsule-play.playing .icon-pause { display: block; }
+
+.capsule-progress {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.spotify-connected .capsule-progress.is-ready {
+  display: flex;
+}
+
+.progress-time {
+  flex-shrink: 0;
+  width: 32px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.progress-time-duration {
+  text-align: right;
+}
+
+.progress-track {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  border-radius: 999px;
+  outline: none;
+}
+
+.progress-track::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(12, 12, 18, 0.12);
+  transition: height 0.15s ease;
+}
+
+.progress-track:hover::before,
+.progress-track.is-dragging::before,
+.progress-track:focus-visible::before {
+  height: 6px;
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--text-active);
+  pointer-events: none;
+  transition: height 0.15s ease;
+}
+
+.progress-track:hover .progress-fill,
+.progress-track.is-dragging .progress-fill,
+.progress-track:focus-visible .progress-fill {
+  height: 6px;
+  background: var(--accent);
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.progress-track:hover .progress-thumb,
+.progress-track.is-dragging .progress-thumb,
+.progress-track:focus-visible .progress-thumb {
+  opacity: 1;
+  transform: scale(1);
+}
 
 .capsule-search-wrap {
   position: relative;

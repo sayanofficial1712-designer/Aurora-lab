@@ -318,6 +318,7 @@ function _updatePlayPauseUI() {
 let _progressMs = 0;
 let _durationMs = 0;
 let _progressLastTick = Date.now();
+let _isSeeking = false;
 
 function _formatTime(ms) {
   if (!ms || ms < 0) return '0:00';
@@ -340,20 +341,48 @@ function _updateProgress(progressMs, durationMs) {
   _updateProgressUI();
 }
 
-function _updateProgressUI() {
-  const fill = document.getElementById('progressFill');
-  const cur = document.getElementById('progressTime');
-  const dur = document.getElementById('durationTime');
-  if (!fill) return;
-  const pct = _durationMs > 0 ? (_progressMs / _durationMs) * 100 : 0;
-  fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-  if (cur) cur.textContent = _formatTime(_progressMs);
-  if (dur) dur.textContent = _formatTime(_durationMs);
+function _updateProgressUI(overrideMs = null) {
+  const progressMs = overrideMs ?? _progressMs;
+  const pct = _durationMs > 0 ? (progressMs / _durationMs) * 100 : 0;
+  const clampedPct = Math.max(0, Math.min(100, pct));
+  const timeLabel = _formatTime(progressMs);
+  const durationLabel = _formatTime(_durationMs);
+
+  document.querySelectorAll('.capsule-progress').forEach((wrap) => {
+    wrap.classList.toggle('is-ready', _durationMs > 0);
+  });
+
+  document.querySelectorAll('.progress-fill').forEach((fill) => {
+    fill.style.width = `${clampedPct}%`;
+  });
+
+  document.querySelectorAll('.progress-thumb').forEach((thumb) => {
+    thumb.style.left = `${clampedPct}%`;
+  });
+
+  document.querySelectorAll('.progress-time-current').forEach((el) => {
+    el.textContent = timeLabel;
+  });
+
+  document.querySelectorAll('.progress-time-duration').forEach((el) => {
+    el.textContent = durationLabel;
+  });
+
+  document.querySelectorAll('.progress-track').forEach((track) => {
+    track.setAttribute('aria-valuenow', String(Math.round(clampedPct)));
+    track.setAttribute('aria-valuetext', `${timeLabel} of ${durationLabel}`);
+  });
+}
+
+function _progressPctFromEvent(trackEl, clientX) {
+  const rect = trackEl.getBoundingClientRect();
+  if (!rect.width) return 0;
+  return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 }
 
 // Tick progress locally between polls so the bar moves smoothly
 function _tickProgress() {
-  if (!_isPlaying || !_durationMs) return;
+  if (_isSeeking || !_isPlaying || !_durationMs) return;
   const now = Date.now();
   _progressMs = Math.min(_durationMs, _progressMs + (now - _progressLastTick));
   _progressLastTick = now;
@@ -365,12 +394,78 @@ async function _seekTo(positionMs) {
   if (!_durationMs) return;
   const clamped = Math.max(0, Math.min(_durationMs, positionMs));
   const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/seek?position_ms=${Math.floor(clamped)}`);
-  if (resp) {
+  if (resp !== null) {
     _progressMs = clamped;
     _progressLastTick = Date.now();
     _updateProgressUI();
   }
 }
+
+function _bindProgressTracks() {
+  document.querySelectorAll('.progress-track').forEach((track) => {
+    let dragging = false;
+
+    const previewAt = (clientX) => {
+      if (!_durationMs) return;
+      const pct = _progressPctFromEvent(track, clientX);
+      _updateProgressUI(pct * _durationMs);
+    };
+
+    const commitAt = (clientX) => {
+      if (!_durationMs) return;
+      const pct = _progressPctFromEvent(track, clientX);
+      _seekTo(pct * _durationMs);
+    };
+
+    track.addEventListener('pointerdown', (e) => {
+      if (!_durationMs) return;
+      dragging = true;
+      _isSeeking = true;
+      track.classList.add('is-dragging');
+      track.setPointerCapture(e.pointerId);
+      previewAt(e.clientX);
+    });
+
+    track.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      previewAt(e.clientX);
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      _isSeeking = false;
+      track.classList.remove('is-dragging');
+      if (track.hasPointerCapture(e.pointerId)) {
+        track.releasePointerCapture(e.pointerId);
+      }
+      commitAt(e.clientX);
+    };
+
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+
+    track.addEventListener('keydown', (e) => {
+      if (!_durationMs) return;
+      const step = e.shiftKey ? 10000 : 5000;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        _seekTo(_progressMs + step);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        _seekTo(_progressMs - step);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        _seekTo(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        _seekTo(_durationMs);
+      }
+    });
+  });
+}
+
+_bindProgressTracks();
 
 // ─── Volume control ───
 let _volumeSyncedFromSpotify = false;
@@ -872,6 +967,8 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
     if (typeof playbackData.device?.volume_percent === 'number') {
       _syncVolumeFromSpotify(playbackData.device.volume_percent);
     }
+  } else if (track.duration_ms) {
+    _syncProgressFromSpotify(_progressMs, track.duration_ms);
   }
 }
 
@@ -1037,17 +1134,6 @@ if (_volumeSlider) {
     clearTimeout(_volumeTimer);
     const v = Number(e.target.value);
     _volumeTimer = setTimeout(() => _setVolume(v), 250);
-  });
-}
-
-// ─── Progress bar seek ───
-const _progressTrack = document.getElementById('progressTrack');
-if (_progressTrack) {
-  _progressTrack.addEventListener('click', (e) => {
-    if (!_durationMs) return;
-    const rect = _progressTrack.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    _seekTo(pct * _durationMs);
   });
 }
 
