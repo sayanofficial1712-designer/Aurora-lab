@@ -1212,12 +1212,21 @@ if (_generateSoundtrackBtn) {
 
 // ─── Music capsule expand / collapse ───
 const _musicCapsule = document.getElementById('musicCapsule');
+const _capsuleExpandBtn = document.getElementById('capsuleExpandBtn');
+const _capsuleCollapseBtn = document.getElementById('capsuleCollapseBtn');
+
+function _syncCapsuleToggleState() {
+  const expanded = _musicCapsule?.classList.contains('is-expanded') ?? false;
+  _capsuleExpandBtn?.setAttribute('aria-expanded', String(expanded));
+  _capsuleCollapseBtn?.setAttribute('aria-expanded', String(expanded));
+}
 
 function _expandCapsule() {
   if (!_musicCapsule) return;
   _musicCapsule.classList.add('is-expanded');
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
+  _syncCapsuleToggleState();
 }
 
 function _collapseCapsule() {
@@ -1225,11 +1234,18 @@ function _collapseCapsule() {
   _musicCapsule.classList.remove('is-expanded');
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = true;
+  _syncCapsuleToggleState();
 }
 
-if (_musicCapsule) {
-  _musicCapsule.addEventListener('mouseenter', _expandCapsule);
-  _musicCapsule.addEventListener('focusin', _expandCapsule);
-  _musicCapsule.addEventListener('mouseleave', _collapseCapsule);
-}
+_capsuleExpandBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _expandCapsule();
+});
+
+_capsuleCollapseBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  _collapseCapsule();
+});
+
+_syncCapsuleToggleState();
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora — Mood Library</title>
-  <link rel="stylesheet" href="style.css?v=20260606">
+  <link rel="stylesheet" href="style.css?v=20260607">
 </head>
 <body>
   <canvas id="aurora" aria-hidden="true"></canvas>
@@ -33,9 +33,9 @@
             <span class="capsule-mini-title" id="spotifyTrack">Nothing playing</span>
             <span class="capsule-mini-artist" id="spotifyArtist">Connect Spotify</span>
           </div>
-          <button type="button" class="capsule-menu-btn" aria-label="More options">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+          <button type="button" class="capsule-toggle-btn" id="capsuleExpandBtn" aria-label="Expand player" aria-expanded="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6"/>
             </svg>
           </button>
         </div>
@@ -70,9 +70,9 @@
             <span class="capsule-track-title" id="capsuleTrackTitle">Nothing playing</span>
             <span class="capsule-track-artist" id="capsuleTrackArtist">Connect Spotify</span>
           </div>
-          <button type="button" class="capsule-menu-btn" aria-label="More options">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+          <button type="button" class="capsule-toggle-btn" id="capsuleCollapseBtn" aria-label="Collapse player" aria-expanded="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 15l6-6 6 6"/>
             </svg>
           </button>
         </div>
@@ -193,8 +193,8 @@
   <span id="mouseValue" hidden>0</span>
   <input type="range" id="volumeSlider" min="0" max="100" value="70" hidden>
 
-  <script src="moods.js?v=20260605"></script>
-  <script src="aurora.js?v=20260605"></script>
-  <script src="spotify.js?v=20260605"></script>
+  <script src="moods.js?v=20260607"></script>
+  <script src="aurora.js?v=20260607"></script>
+  <script src="spotify.js?v=20260607"></script>
 </body>
 </html>

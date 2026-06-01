@@ -367,6 +367,7 @@ button, input, select, textarea { font-family: inherit; }
   gap: 12px;
   padding: 14px 16px 16px;
   height: var(--capsule-collapsed-h);
+  pointer-events: auto;
 }
 
 .music-capsule.is-expanded .capsule-collapsed {
@@ -380,7 +381,7 @@ button, input, select, textarea { font-family: inherit; }
   gap: 10px;
 }
 
-.capsule-menu-btn {
+.capsule-toggle-btn {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
@@ -392,10 +393,10 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
-.capsule-menu-btn:hover {
+.capsule-toggle-btn:hover {
   color: var(--text-active);
   background: rgba(255, 255, 255, 0.18);
 }
@@ -408,6 +409,8 @@ button, input, select, textarea { font-family: inherit; }
   justify-content: center;
   gap: 18px;
   width: 100%;
+  position: relative;
+  z-index: 2;
 }
 
 .capsule-mini-art {
