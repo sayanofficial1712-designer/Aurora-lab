@@ -415,6 +415,7 @@ function _showSearchResults(tracks) {
   if (!tracks.length) {
     list.innerHTML = '<li class="search-empty">No results</li>';
     list.style.display = 'block';
+    document.getElementById('musicCapsule')?.classList.add('is-search-open');
     return;
   }
   tracks.forEach((track) => {
@@ -435,11 +436,13 @@ function _showSearchResults(tracks) {
     list.appendChild(li);
   });
   list.style.display = 'block';
+  document.getElementById('musicCapsule')?.classList.add('is-search-open');
 }
 
 function _hideSearchResults() {
   const list = document.getElementById('searchResults');
   if (list) list.style.display = 'none';
+  document.getElementById('musicCapsule')?.classList.remove('is-search-open');
 }
 
 // Genre → audio-feature heuristics. Widened spread so different songs feel dramatically different.
@@ -1231,6 +1234,7 @@ function _expandCapsule() {
 
 function _collapseCapsule() {
   if (!_musicCapsule) return;
+  _hideSearchResults();
   _musicCapsule.classList.remove('is-expanded');
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = true;
