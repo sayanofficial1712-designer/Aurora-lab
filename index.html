@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora — Mood Library</title>
-  <link rel="stylesheet" href="style.css?v=20260605">
+  <link rel="stylesheet" href="style.css?v=20260606">
 </head>
 <body>
   <canvas id="aurora" aria-hidden="true"></canvas>
@@ -40,6 +40,11 @@
           </button>
         </div>
         <div class="capsule-collapsed-controls player-controls">
+          <button type="button" class="player-btn player-btn--mini" data-mode="shuffle" id="shuffleBtnMini" aria-label="Shuffle" aria-pressed="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+          </button>
           <button type="button" class="player-btn" id="prevBtnMini" aria-label="Previous track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
           </button>
@@ -49,11 +54,6 @@
           </button>
           <button type="button" class="player-btn" id="nextBtnMini" aria-label="Next track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
-          <button type="button" class="player-btn player-btn--mini" data-mode="shuffle" id="shuffleBtnMini" aria-label="Shuffle" aria-pressed="false">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
-            </svg>
           </button>
           <button type="button" class="player-btn player-btn--mini" data-mode="repeat" id="repeatBtnMini" aria-label="Repeat" aria-pressed="false">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -85,6 +85,11 @@
         </div>
 
         <div class="capsule-controls player-controls">
+          <button type="button" class="player-btn" data-mode="shuffle" id="shuffleBtn" aria-label="Shuffle" aria-pressed="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+            </svg>
+          </button>
           <button type="button" class="player-btn" id="prevBtn" aria-label="Previous track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
           </button>
@@ -94,11 +99,6 @@
           </button>
           <button type="button" class="player-btn" id="nextBtn" aria-label="Next track">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-          </button>
-          <button type="button" class="player-btn" data-mode="shuffle" id="shuffleBtn" aria-label="Shuffle" aria-pressed="false">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
-            </svg>
           </button>
           <button type="button" class="player-btn" data-mode="repeat" id="repeatBtn" aria-label="Repeat" aria-pressed="false">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

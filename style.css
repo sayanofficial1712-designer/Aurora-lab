@@ -400,11 +400,14 @@ button, input, select, textarea { font-family: inherit; }
   background: rgba(255, 255, 255, 0.18);
 }
 
-.capsule-collapsed-controls {
+.capsule-collapsed-controls,
+.capsule-controls,
+.player-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 18px;
+  width: 100%;
 }
 
 .capsule-mini-art {
@@ -584,10 +587,6 @@ body.spotify-connected .music-capsule.is-playing .vinyl-tonearm {
 }
 
 .capsule-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
   padding-top: 2px;
 }
 
