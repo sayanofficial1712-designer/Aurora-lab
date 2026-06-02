@@ -195,14 +195,14 @@ let _repeatState = 'off';
 
 function _showControlFeedback(msg, isError = false) {
   const el = document.getElementById('playbackMsg');
-  if (!el || !window.spotifyState?.connected) return;
+  if (!el) return;
   el.textContent = msg;
   el.style.color = isError ? 'rgba(200,60,60,0.85)' : 'rgba(29,185,84,0.9)';
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.textContent = ''; }, 3000);
+  el._t = setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
-async function _controlFetch(method, endpoint, body) {
+async function _controlFetch(method, endpoint, body, { quiet = false } = {}) {
   const token = await _getToken();
   const opts = { method, headers: { Authorization: `Bearer ${token}` } };
   if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
@@ -214,7 +214,7 @@ async function _controlFetch(method, endpoint, body) {
     return null;
   }
   if (resp.status === 404) {
-    _showControlFeedback('No active Spotify device — open Spotify on any device first', true);
+    _showControlFeedback('No active Spotify device — open Spotify on your phone first', true);
     return null;
   }
   if (resp.status === 401) {
@@ -224,9 +224,48 @@ async function _controlFetch(method, endpoint, body) {
   if (resp.ok || resp.status === 204) {
     _isPremium = true;
     _premiumRestrictionDetected = false;
-    _showControlFeedback('Playback synced');
+    if (!quiet) _showControlFeedback('Playback synced');
   }
   return resp;
+}
+
+async function _fetchDevices(token) {
+  const resp = await fetch('https://api.spotify.com/v1/me/player/devices', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.devices || [];
+}
+
+async function _resolvePlaybackDeviceId(token) {
+  const devices = await _fetchDevices(token);
+  if (!devices.length) return null;
+
+  const active = devices.find((d) => d.is_active);
+  if (active) return active.id;
+
+  const preferred =
+    devices.find((d) => d.type === 'Smartphone' && !d.is_restricted) ||
+    devices.find((d) => d.type === 'Computer' && !d.is_restricted) ||
+    devices.find((d) => !d.is_restricted) ||
+    devices[0];
+
+  if (!preferred?.id) return null;
+
+  const transfer = await fetch('https://api.spotify.com/v1/me/player', {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ device_ids: [preferred.id], play: false }),
+  });
+
+  if (!transfer.ok && transfer.status !== 204) return null;
+
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  return preferred.id;
 }
 
 async function _playPause() {
@@ -302,12 +341,24 @@ async function _toggleRepeat() {
 }
 
 async function _playTrackUri(uri, trackName, options = {}) {
+  if (!window.spotifyState?.connected) {
+    _showControlFeedback('Connect Spotify to play tracks', true);
+    return false;
+  }
+
   if (!options.fromMoodSelection) {
     _moodSelectionTrackId = null;
     _moodSelectionMoodId = null;
   }
 
-  const resp = await _controlFetch('PUT', 'https://api.spotify.com/v1/me/player/play', { uris: [uri] });
+  const token = await _getToken();
+  let endpoint = 'https://api.spotify.com/v1/me/player/play';
+  const deviceId = await _resolvePlaybackDeviceId(token);
+  if (deviceId) {
+    endpoint = `${endpoint}?device_id=${encodeURIComponent(deviceId)}`;
+  }
+
+  const resp = await _controlFetch('PUT', endpoint, { uris: [uri] }, { quiet: true });
   if (resp) {
     if (options.fromMoodSelection && options.trackId) {
       _moodSelectionTrackId = options.trackId;
@@ -319,6 +370,12 @@ async function _playTrackUri(uri, trackName, options = {}) {
       _scheduleTrackMoodRefresh();
     }
 
+    const track = options.track;
+    if (track) {
+      _setTrackDisplay(track, true);
+      _syncProgressFromSpotify(0, track.duration_ms || 0);
+    }
+
     if (!options.fromMoodSelection) {
       _showControlFeedback(`Playing ${trackName || 'track'}`);
     }
@@ -326,7 +383,15 @@ async function _playTrackUri(uri, trackName, options = {}) {
     if (!options.keepSearch) _hideSearchResults();
     const searchInput = document.getElementById('searchInput');
     if (searchInput && !options.keepSearch) searchInput.value = '';
+
+    setTimeout(_refreshTrackAndMood, 600);
+    return true;
   }
+
+  if (!deviceId) {
+    _showControlFeedback('Open the Spotify app on your phone, then try again', true);
+  }
+  return false;
 }
 
 function _updatePlayPauseUI() {
@@ -512,6 +577,10 @@ let _searchTimer = null;
 
 async function _searchTracks(query) {
   if (!query.trim()) { _hideSearchResults(); return; }
+  if (!window.spotifyState?.connected) {
+    _showControlFeedback('Connect Spotify to search and play', true);
+    return;
+  }
   try {
     const token = await _getToken();
     const resp = await fetch(
@@ -523,6 +592,16 @@ async function _searchTracks(query) {
     _showSearchResults(data.tracks?.items || []);
   } catch (err) {
     console.warn('[Aurora × Spotify] search error:', err.message);
+  }
+}
+
+async function _playSearchTrack(track, rowEl) {
+  if (!track?.uri) return;
+  if (rowEl) rowEl.classList.add('is-loading');
+  try {
+    await _playTrackUri(track.uri, track.name, { track });
+  } finally {
+    if (rowEl) rowEl.classList.remove('is-loading');
   }
 }
 
@@ -548,8 +627,9 @@ function _showSearchResults(tracks) {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
     `;
-    li.querySelector('.search-play-btn').addEventListener('click', () => {
-      _playTrackUri(track.uri, track.name);
+    li.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _playSearchTrack(track, li);
     });
     list.appendChild(li);
   });
@@ -1052,9 +1132,17 @@ function _setTrackDisplay(track, isPlaying = true, playbackData = null) {
 
   if (!track) {
     trackEl.textContent = 'Nothing playing';
-    if (artistEl) artistEl.textContent = 'Connect Spotify';
+    if (artistEl) {
+      artistEl.textContent = window.spotifyState?.connected
+        ? 'Search or pick a mood'
+        : 'Connect Spotify';
+    }
     if (capsuleTitle) capsuleTitle.textContent = 'Nothing playing';
-    if (capsuleArtist) capsuleArtist.textContent = 'Connect Spotify';
+    if (capsuleArtist) {
+      capsuleArtist.textContent = window.spotifyState?.connected
+        ? 'Search or pick a mood'
+        : 'Connect Spotify';
+    }
     _clearArtElements();
     _isPlaying = false;
     _updatePlayPauseUI();
@@ -1375,6 +1463,7 @@ async function _playMoodSoundtrack(moodId) {
       fromMoodSelection: true,
       moodId: libMood,
       trackId: track.id,
+      track,
     });
     _showControlFeedback(`${moodLabel} · ${track.name}`);
     _setTrackDisplay(track, true);
@@ -1495,6 +1584,7 @@ function _renderSoundtrackStack(tracks, lockedMood) {
         fromMoodSelection: true,
         moodId: lockedMood,
         trackId: track.id,
+        track,
       });
       if (typeof window.setMoodConfidence === 'function') {
         const features = await _deriveFeatures(await _getToken(), track);
