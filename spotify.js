@@ -77,6 +77,7 @@ async function _initiateAuth() {
   }
   const { verifier, challenge } = await _generatePKCE();
   localStorage.setItem('aurora_spotify_verifier', verifier);
+  sessionStorage.setItem('aurora_spotify_auth_pending', '1');
 
   const params = new URLSearchParams({
     client_id: SPOTIFY_CLIENT_ID,
@@ -1209,17 +1210,27 @@ async function _connect(token) {
   _premiumRestrictionDetected = false;
   _volumeSyncedFromSpotify = false;
   _setConnectedUI(true);
-  _showControlFeedback('Connected — search for a track below');
+  document.body.classList.remove('aurora-spotify-handoff');
+  sessionStorage.removeItem('aurora_spotify_auth_pending');
+
+  const shouldExpand = _shouldOpenCapsuleAfterConnect;
+  _shouldOpenCapsuleAfterConnect = false;
+
+  if (shouldExpand) {
+    _expandCapsuleSmooth();
+  }
+
   console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
-  await _refreshTrackAndMood(true);
+
+  _refreshTrackAndMood(true).catch((err) => {
+    console.warn('[Aurora × Spotify] initial refresh:', err.message);
+  });
   _pollInterval = setInterval(_poll, 2500);
 
-  if (_shouldOpenCapsuleAfterConnect) {
-    _shouldOpenCapsuleAfterConnect = false;
-    _expandCapsule();
-    setTimeout(() => {
-      document.getElementById('searchInput')?.focus({ preventScroll: true });
-    }, 460);
+  if (shouldExpand) {
+    setTimeout(() => _showControlFeedback('Connected — search for a track below'), 520);
+  } else {
+    _showControlFeedback('Connected — search for a track below');
   }
 }
 
@@ -1627,18 +1638,55 @@ function _syncCapsuleToggleState() {
 
 function _expandCapsule() {
   if (!_musicCapsule) return;
-  _musicCapsule.classList.add('is-expanded');
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
+  _musicCapsule.classList.add('is-expanded');
+  _musicCapsule.classList.remove('is-expanding');
   _syncCapsuleToggleState();
+}
+
+function _expandCapsuleSmooth() {
+  if (!_musicCapsule) return;
+  const expanded = document.getElementById('capsuleExpanded');
+  if (expanded) expanded.hidden = false;
+
+  requestAnimationFrame(() => {
+    _musicCapsule.classList.add('is-expanding');
+    requestAnimationFrame(() => {
+      _musicCapsule.classList.add('is-expanded');
+      _syncCapsuleToggleState();
+
+      const focusSearch = () => {
+        document.getElementById('searchInput')?.focus({ preventScroll: true });
+      };
+
+      const onEnd = (event) => {
+        if (event.target !== _musicCapsule || event.propertyName !== 'height') return;
+        _musicCapsule.removeEventListener('transitionend', onEnd);
+        _musicCapsule.classList.remove('is-expanding');
+        focusSearch();
+      };
+
+      _musicCapsule.addEventListener('transitionend', onEnd);
+      setTimeout(focusSearch, 720);
+    });
+  });
 }
 
 function _collapseCapsule() {
   if (!_musicCapsule) return;
   _hideSearchResults();
-  _musicCapsule.classList.remove('is-expanded');
+  _musicCapsule.classList.remove('is-expanded', 'is-expanding');
   const expanded = document.getElementById('capsuleExpanded');
-  if (expanded) expanded.hidden = true;
+  if (expanded) {
+    const onEnd = (event) => {
+      if (event.target !== _musicCapsule || event.propertyName !== 'height') return;
+      _musicCapsule.removeEventListener('transitionend', onEnd);
+      expanded.hidden = true;
+    };
+    _musicCapsule.addEventListener('transitionend', onEnd);
+    setTimeout(() => { expanded.hidden = true; }, 520);
+  }
   _syncCapsuleToggleState();
 }
 

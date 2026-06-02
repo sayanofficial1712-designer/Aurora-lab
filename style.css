@@ -379,9 +379,14 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 22px;
   overflow: hidden;
   transition:
-    height 0.48s cubic-bezier(0.34, 1.06, 0.48, 1),
-    box-shadow 0.35s ease;
+    height 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease;
   height: var(--capsule-collapsed-h);
+}
+
+.music-capsule.is-expanding {
+  overflow: hidden;
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.11);
 }
 
 .music-capsule:has(.capsule-mini-art.loaded) {
@@ -406,6 +411,13 @@ button, input, select, textarea { font-family: inherit; }
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
   box-sizing: border-box;
+  transition: opacity 0.32s ease;
+}
+
+.music-capsule.is-expanded .capsule-collapsed,
+.music-capsule.is-expanding .capsule-collapsed {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .capsule-collapsed-onboarding {
@@ -415,10 +427,16 @@ button, input, select, textarea { font-family: inherit; }
   justify-content: center;
   gap: 8px;
   height: 100%;
+  transition: opacity 0.28s ease;
 }
 
 body:not(.spotify-connected) .capsule-collapsed-onboarding {
   display: flex;
+}
+
+body.aurora-spotify-handoff .capsule-collapsed-onboarding {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .capsule-collapsed-player {
@@ -453,7 +471,7 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-
   --capsule-collapsed-h: 108px;
 }
 
-.music-capsule.is-expanded .capsule-collapsed {
+.music-capsule.is-expanded:not(.is-expanding) .capsule-collapsed {
   display: none;
 }
 
@@ -561,14 +579,18 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-
   padding: 14px 16px;
   height: var(--capsule-expanded-h);
   overflow: visible;
+  opacity: 0;
+  transition: opacity 0.42s ease 0.14s;
 }
 
 .capsule-expanded[hidden] {
   display: none !important;
 }
 
-.music-capsule.is-expanded .capsule-expanded {
+.music-capsule.is-expanded .capsule-expanded,
+.music-capsule.is-expanding .capsule-expanded {
   display: flex;
+  opacity: 1;
 }
 
 .capsule-art {
@@ -1326,4 +1348,11 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
 @media (prefers-reduced-motion: reduce) {
   .vinyl-disc,
   .mood-cartridge { animation: none !important; transition-duration: 0.01ms; }
+
+  .music-capsule,
+  .capsule-collapsed,
+  .capsule-expanded,
+  .capsule-collapsed-onboarding {
+    transition-duration: 0.01ms !important;
+  }
 }
