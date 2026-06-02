@@ -1338,7 +1338,6 @@ if (_searchInput) {
     const q = e.target.value.trim();
     if (!q) { _hideSearchResults(); return; }
     _searchTimer = setTimeout(() => _searchTracks(q), 350);
-    _expandCapsule();
   });
 
   _searchInput.addEventListener('keydown', (e) => {
@@ -1615,16 +1614,8 @@ if (_generateSoundtrackBtn) {
   _generateSoundtrackBtn.addEventListener('click', _generateSoundtrack);
 }
 
-// ─── Music capsule expand / collapse ───
+// ─── Music capsule — expanded when connected, compact connect card when not ───
 const _musicCapsule = document.getElementById('musicCapsule');
-const _capsuleExpandBtn = document.getElementById('capsuleExpandBtn');
-const _capsuleCollapseBtn = document.getElementById('capsuleCollapseBtn');
-
-function _syncCapsuleToggleState() {
-  const expanded = _musicCapsule?.classList.contains('is-expanded') ?? false;
-  _capsuleExpandBtn?.setAttribute('aria-expanded', String(expanded));
-  _capsuleCollapseBtn?.setAttribute('aria-expanded', String(expanded));
-}
 
 function _expandCapsule(instant = false) {
   if (!_musicCapsule) return;
@@ -1632,7 +1623,6 @@ function _expandCapsule(instant = false) {
   if (panel) panel.hidden = false;
   if (instant) _musicCapsule.style.transition = 'none';
   _musicCapsule.classList.add('is-expanded');
-  _syncCapsuleToggleState();
   if (instant) {
     void _musicCapsule.offsetHeight;
     _musicCapsule.style.transition = '';
@@ -1647,21 +1637,8 @@ function _collapseCapsule(instant = false) {
   _musicCapsule.classList.remove('is-expanded');
   const panel = document.getElementById('capsuleExpanded');
   if (panel) panel.hidden = true;
-  _syncCapsuleToggleState();
   if (instant) {
     void _musicCapsule.offsetHeight;
     _musicCapsule.style.transition = '';
   }
 }
-
-_capsuleExpandBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  _expandCapsule();
-});
-
-_capsuleCollapseBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  _collapseCapsule();
-});
-
-_syncCapsuleToggleState();
