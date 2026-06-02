@@ -968,12 +968,22 @@ body.spotify-connected .music-capsule.is-playing .vinyl-tonearm {
   transition: background 0.3s ease;
 }
 
-.spotify-connect-btn .spotify-logo {
+.spotify-logo-badge {
   flex-shrink: 0;
-  display: block;
-  overflow: visible;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #fff;
   border-radius: 50%;
+  overflow: hidden;
+}
+
+.spotify-connect-btn .spotify-logo {
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 
 .spotify-connect-btn:hover { background: var(--accent-hover); }
