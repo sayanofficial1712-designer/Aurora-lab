@@ -409,19 +409,40 @@ body:not(.spotify-connected) .music-capsule {
   height: var(--capsule-collapsed-h) !important;
 }
 
-/* ── Connected: always expanded (connect → search) ── */
-body.spotify-connected .music-capsule {
-  height: var(--capsule-expanded-h) !important;
+/* ── Connected + expanded (default on connect) ── */
+body.spotify-connected .music-capsule.is-expanded {
+  height: var(--capsule-expanded-h);
   overflow: visible;
 }
 
-body.spotify-connected .capsule-collapsed,
+body.spotify-connected .music-capsule.is-expanded .capsule-collapsed {
+  display: none !important;
+}
+
+body.spotify-connected .music-capsule.is-expanded .capsule-expanded {
+  display: flex !important;
+}
+
 body.spotify-connected .capsule-collapsed-onboarding {
   display: none !important;
 }
 
-body.spotify-connected .capsule-toggle-btn {
-  display: none;
+/* ── Connected + collapsed (chevron) ── */
+body.spotify-connected .music-capsule:not(.is-expanded) {
+  height: var(--capsule-collapsed-h);
+  overflow: hidden;
+}
+
+body.spotify-connected .music-capsule:not(.is-expanded) .capsule-collapsed {
+  display: flex;
+}
+
+body.spotify-connected .music-capsule:not(.is-expanded) .capsule-collapsed-player {
+  display: flex;
+}
+
+body.spotify-connected .music-capsule:not(.is-expanded) .capsule-expanded {
+  display: none !important;
 }
 
 .capsule-collapsed {
@@ -574,7 +595,7 @@ body.spotify-connected .capsule-toggle-btn {
   display: none !important;
 }
 
-body.spotify-connected .capsule-expanded {
+body.spotify-connected .music-capsule.is-expanded .capsule-expanded {
   display: flex !important;
 }
 
