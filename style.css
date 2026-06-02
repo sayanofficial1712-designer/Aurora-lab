@@ -397,18 +397,27 @@ button, input, select, textarea { font-family: inherit; }
   overflow: visible;
 }
 
-html.aurora-capsule-expanded .music-capsule {
+/* Never show expanded player until Spotify is connected */
+body:not(.spotify-connected) .music-capsule {
+  height: var(--capsule-collapsed-h) !important;
+  overflow: hidden;
+}
+
+body:not(.spotify-connected) .capsule-expanded {
+  display: none !important;
+}
+
+body:not(.spotify-connected) .music-capsule.is-expanded .capsule-collapsed {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+body.spotify-connected .music-capsule.is-expanded {
   height: var(--capsule-expanded-h);
   overflow: visible;
-}
-
-html.aurora-capsule-expanded .capsule-expanded {
-  display: flex;
-  opacity: 1;
-}
-
-html.aurora-capsule-expanded .capsule-expanded[hidden] {
-  display: flex !important;
 }
 
 .music-capsule.is-instant,
