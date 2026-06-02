@@ -4,15 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora — Mood Library</title>
-  <link rel="stylesheet" href="style.css?v=20260641">
+  <link rel="stylesheet" href="style.css?v=20260642">
 </head>
 <body>
 <script>
   (function () {
     var params = new URLSearchParams(window.location.search);
-    if (params.has('code') || sessionStorage.getItem('aurora_spotify_auth_pending') === '1') {
-      document.body.classList.add('aurora-spotify-handoff');
-    }
+    var pending = params.has('code') || sessionStorage.getItem('aurora_spotify_auth_pending') === '1';
+    var hasToken = false;
+    try { hasToken = !!localStorage.getItem('aurora_spotify_token'); } catch (e) {}
+    if (pending) document.body.classList.add('aurora-spotify-handoff');
+    if (pending || hasToken) document.documentElement.classList.add('aurora-capsule-expanded');
   })();
 </script>
   <canvas id="aurora" aria-hidden="true"></canvas>
@@ -161,6 +163,15 @@
           <p class="capsule-status" id="playbackMsg"></p>
         </div>
       </div>
+      <script>
+        (function () {
+          if (!document.documentElement.classList.contains('aurora-capsule-expanded')) return;
+          var cap = document.getElementById('musicCapsule');
+          var exp = document.getElementById('capsuleExpanded');
+          if (cap) cap.classList.add('is-expanded', 'is-instant');
+          if (exp) exp.hidden = false;
+        })();
+      </script>
     </aside>
 
     <!-- Controls Panel — bottom right -->
@@ -226,6 +237,6 @@
 
   <script src="moods.js?v=20260620"></script>
   <script src="aurora.js?v=20260630"></script>
-  <script src="spotify.js?v=20260640"></script>
+  <script src="spotify.js?v=20260642"></script>
 </body>
 </html>

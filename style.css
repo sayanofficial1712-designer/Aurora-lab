@@ -398,6 +398,30 @@ button, input, select, textarea { font-family: inherit; }
   overflow: visible;
 }
 
+html.aurora-capsule-expanded .music-capsule {
+  height: var(--capsule-expanded-h);
+  overflow: visible;
+}
+
+html.aurora-capsule-expanded .capsule-collapsed {
+  display: none;
+}
+
+html.aurora-capsule-expanded .capsule-expanded {
+  display: flex;
+  opacity: 1;
+}
+
+html.aurora-capsule-expanded .capsule-expanded[hidden] {
+  display: flex !important;
+}
+
+.music-capsule.is-instant,
+.music-capsule.is-instant .capsule-expanded,
+.music-capsule.is-instant .capsule-collapsed {
+  transition: none !important;
+}
+
 .music-capsule.is-search-open {
   z-index: 40;
 }
@@ -418,6 +442,11 @@ button, input, select, textarea { font-family: inherit; }
 .music-capsule.is-expanding .capsule-collapsed {
   opacity: 0;
   pointer-events: none;
+}
+
+.music-capsule.is-expanded:not(.is-expanding) .capsule-collapsed,
+html.aurora-capsule-expanded .capsule-collapsed {
+  display: none;
 }
 
 .capsule-collapsed-onboarding {
@@ -469,10 +498,6 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded) {
 
 body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-art.loaded) {
   --capsule-collapsed-h: 108px;
-}
-
-.music-capsule.is-expanded:not(.is-expanding) .capsule-collapsed {
-  display: none;
 }
 
 .capsule-header,
