@@ -1143,7 +1143,6 @@ function _disconnect() {
   localStorage.removeItem('aurora_spotify_expiry');
   _setConnectedUI(false);
   _setTrackDisplay(null);
-  if (typeof window.wakeUiChrome === 'function') window.wakeUiChrome();
   const feedback = document.getElementById('playbackMsg');
   if (feedback) feedback.textContent = '';
 }
@@ -1529,7 +1528,6 @@ function _expandCapsule() {
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
   _syncCapsuleToggleState();
-  if (typeof window.wakeUiChrome === 'function') window.wakeUiChrome();
 }
 
 function _collapseCapsule() {
@@ -1552,39 +1550,3 @@ _capsuleCollapseBtn?.addEventListener('click', (e) => {
 });
 
 _syncCapsuleToggleState();
-
-// ─── UI immersion — hide chrome when cursor leaves the window ───
-let _uiHideTimer = null;
-
-function _setUiChromeVisible(visible) {
-  document.body.classList.toggle('ui-dimmed', !visible);
-}
-
-function _hideUiChrome() {
-  _setUiChromeVisible(false);
-}
-
-function _showUiChrome() {
-  clearTimeout(_uiHideTimer);
-  _setUiChromeVisible(true);
-}
-
-function _initUiImmersion() {
-  const root = document.documentElement;
-
-  root.addEventListener('mouseleave', () => {
-    clearTimeout(_uiHideTimer);
-    _uiHideTimer = setTimeout(_hideUiChrome, 60);
-  });
-
-  root.addEventListener('mouseenter', _showUiChrome);
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) _hideUiChrome();
-    else _showUiChrome();
-  });
-}
-
-window.wakeUiChrome = _showUiChrome;
-
-_initUiImmersion();

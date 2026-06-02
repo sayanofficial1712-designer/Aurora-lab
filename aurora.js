@@ -555,7 +555,6 @@ function openControls() {
   controlsPanelWrap?.classList.add('is-open');
   controlsPanel?.setAttribute('aria-hidden', 'false');
   controlsToggle?.setAttribute('aria-expanded', 'true');
-  if (typeof window.wakeUiChrome === 'function') window.wakeUiChrome();
 }
 
 function closeControls() {
