@@ -366,9 +366,9 @@ button, input, select, textarea { font-family: inherit; }
   color: var(--accent);
 }
 
-/* Music Capsule */
+/* Music Capsule — two states: disconnected (connect) | connected (expanded player) */
 .music-capsule {
-  --capsule-collapsed-h: 136px;
+  --capsule-collapsed-h: 108px;
   --capsule-expanded-h: 520px;
 
   position: fixed;
@@ -378,14 +378,8 @@ button, input, select, textarea { font-family: inherit; }
   width: var(--capsule-w);
   border-radius: 22px;
   overflow: hidden;
-  transition:
-    height 0.55s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.4s ease;
   height: var(--capsule-collapsed-h);
-}
-
-.music-capsule.is-collapsing {
-  overflow: hidden;
+  transition: height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .music-capsule:has(.capsule-mini-art.loaded) {
@@ -397,37 +391,49 @@ button, input, select, textarea { font-family: inherit; }
   overflow: visible;
 }
 
-/* Never show expanded player until Spotify is connected */
-body:not(.spotify-connected) .music-capsule {
-  height: var(--capsule-collapsed-h) !important;
-  overflow: hidden;
+.music-capsule.is-search-open {
+  z-index: 40;
 }
 
+/* ── Disconnected: connect card only ── */
+body:not(.spotify-connected) .capsule-collapsed-onboarding {
+  display: flex;
+}
+
+body:not(.spotify-connected) .capsule-collapsed-player,
 body:not(.spotify-connected) .capsule-expanded {
   display: none !important;
 }
 
-body:not(.spotify-connected) .music-capsule.is-expanded .capsule-collapsed {
-  position: relative;
-  inset: auto;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+body:not(.spotify-connected) .music-capsule {
+  height: var(--capsule-collapsed-h) !important;
 }
 
+/* ── Connected + expanded (default) ── */
 body.spotify-connected .music-capsule.is-expanded {
   height: var(--capsule-expanded-h);
   overflow: visible;
 }
 
-.music-capsule.is-instant,
-.music-capsule.is-instant .capsule-expanded,
-.music-capsule.is-instant .capsule-collapsed {
-  transition: none !important;
+body.spotify-connected .music-capsule.is-expanded .capsule-collapsed {
+  display: none !important;
 }
 
-.music-capsule.is-search-open {
-  z-index: 40;
+body.spotify-connected .music-capsule.is-expanded .capsule-expanded {
+  display: flex !important;
+}
+
+body.spotify-connected .capsule-collapsed-onboarding {
+  display: none !important;
+}
+
+/* ── Connected + collapsed (chevron) ── */
+body.spotify-connected .music-capsule:not(.is-expanded) .capsule-collapsed-player {
+  display: flex;
+}
+
+body.spotify-connected .music-capsule:not(.is-expanded) .capsule-expanded {
+  display: none !important;
 }
 
 .capsule-collapsed {
@@ -439,18 +445,6 @@ body.spotify-connected .music-capsule.is-expanded {
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
   box-sizing: border-box;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.38s ease, visibility 0.38s ease;
-}
-
-.music-capsule.is-expanded .capsule-collapsed {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .capsule-collapsed-onboarding {
@@ -460,16 +454,6 @@ body.spotify-connected .music-capsule.is-expanded {
   justify-content: center;
   gap: 8px;
   height: 100%;
-  transition: opacity 0.28s ease;
-}
-
-body:not(.spotify-connected) .capsule-collapsed-onboarding {
-  display: flex;
-}
-
-body.aurora-spotify-handoff .capsule-collapsed-onboarding {
-  opacity: 0;
-  pointer-events: none;
 }
 
 .capsule-collapsed-player {
@@ -477,10 +461,6 @@ body.aurora-spotify-handoff .capsule-collapsed-onboarding {
   flex-direction: column;
   gap: 10px;
   height: 100%;
-}
-
-body.spotify-connected .capsule-collapsed-player {
-  display: flex;
 }
 
 .capsule-onboarding-hint {
@@ -494,14 +474,6 @@ body.spotify-connected .capsule-collapsed-player {
   width: 100%;
   padding: 12px 16px;
   font-size: 13px;
-}
-
-body:not(.spotify-connected) .music-capsule:not(.is-expanded) {
-  --capsule-collapsed-h: 108px;
-}
-
-body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-art.loaded) {
-  --capsule-collapsed-h: 108px;
 }
 
 .capsule-header,
@@ -602,16 +574,12 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-
 }
 
 .capsule-expanded {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 12px;
   padding: 14px 16px;
   height: var(--capsule-expanded-h);
   overflow: visible;
-  position: relative;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.4s ease;
 }
 
 .capsule-expanded[hidden] {
@@ -620,13 +588,6 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-
 
 .music-capsule.is-expanded .capsule-expanded {
   display: flex;
-  opacity: 1;
-  transition: opacity 0.42s ease 0.1s;
-}
-
-.music-capsule.is-collapsing .capsule-expanded {
-  opacity: 0;
-  transition: opacity 0.28s ease;
 }
 
 .capsule-art {

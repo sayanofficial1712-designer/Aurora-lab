@@ -4,16 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aurora — Mood Library</title>
-  <link rel="stylesheet" href="style.css?v=20260644">
+  <link rel="stylesheet" href="style.css?v=20260645">
 </head>
 <body>
-<script>
-  (function () {
-    var params = new URLSearchParams(window.location.search);
-    var pending = params.has('code') || sessionStorage.getItem('aurora_spotify_auth_pending') === '1';
-    if (pending) document.body.classList.add('aurora-spotify-handoff');
-  })();
-</script>
   <canvas id="aurora" aria-hidden="true"></canvas>
 
   <div class="app-shell">
@@ -225,6 +218,6 @@
 
   <script src="moods.js?v=20260620"></script>
   <script src="aurora.js?v=20260630"></script>
-  <script src="spotify.js?v=20260644"></script>
+  <script src="spotify.js?v=20260645"></script>
 </body>
 </html>
