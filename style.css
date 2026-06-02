@@ -379,14 +379,13 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 22px;
   overflow: hidden;
   transition:
-    height 0.62s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.45s ease;
+    height 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.4s ease;
   height: var(--capsule-collapsed-h);
 }
 
-.music-capsule.is-expanding {
+.music-capsule.is-collapsing {
   overflow: hidden;
-  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.11);
 }
 
 .music-capsule:has(.capsule-mini-art.loaded) {
@@ -401,10 +400,6 @@ button, input, select, textarea { font-family: inherit; }
 html.aurora-capsule-expanded .music-capsule {
   height: var(--capsule-expanded-h);
   overflow: visible;
-}
-
-html.aurora-capsule-expanded .capsule-collapsed {
-  display: none;
 }
 
 html.aurora-capsule-expanded .capsule-expanded {
@@ -435,18 +430,18 @@ html.aurora-capsule-expanded .capsule-expanded[hidden] {
   height: var(--capsule-collapsed-h);
   pointer-events: auto;
   box-sizing: border-box;
-  transition: opacity 0.32s ease;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.38s ease, visibility 0.38s ease;
 }
 
-.music-capsule.is-expanded .capsule-collapsed,
-.music-capsule.is-expanding .capsule-collapsed {
+.music-capsule.is-expanded .capsule-collapsed {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-}
-
-.music-capsule.is-expanded:not(.is-expanding) .capsule-collapsed,
-html.aurora-capsule-expanded .capsule-collapsed {
-  display: none;
 }
 
 .capsule-collapsed-onboarding {
@@ -604,18 +599,25 @@ body:not(.spotify-connected) .music-capsule:not(.is-expanded):has(.capsule-mini-
   padding: 14px 16px;
   height: var(--capsule-expanded-h);
   overflow: visible;
+  position: relative;
+  z-index: 1;
   opacity: 0;
-  transition: opacity 0.42s ease 0.14s;
+  transition: opacity 0.4s ease;
 }
 
 .capsule-expanded[hidden] {
   display: none !important;
 }
 
-.music-capsule.is-expanded .capsule-expanded,
-.music-capsule.is-expanding .capsule-expanded {
+.music-capsule.is-expanded .capsule-expanded {
   display: flex;
   opacity: 1;
+  transition: opacity 0.42s ease 0.1s;
+}
+
+.music-capsule.is-collapsing .capsule-expanded {
+  opacity: 0;
+  transition: opacity 0.28s ease;
 }
 
 .capsule-art {

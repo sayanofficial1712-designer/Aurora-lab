@@ -1205,7 +1205,7 @@ function _setConnectedUI(connected) {
 // ─────────────────────────────────────────────────────────────
 // Connect / disconnect
 // ─────────────────────────────────────────────────────────────
-async function _connect(token, { focusSearch = false } = {}) {
+async function _connect(token) {
   window.spotifyState.connected = true;
   _lastMoodTrackKey = null;
   _forceNextMoodDetect = true;
@@ -1223,12 +1223,6 @@ async function _connect(token, { focusSearch = false } = {}) {
   });
   _pollInterval = setInterval(_poll, 2500);
   _showControlFeedback('Connected — search for a track below');
-
-  if (focusSearch) {
-    setTimeout(() => {
-      document.getElementById('searchInput')?.focus({ preventScroll: true });
-    }, 120);
-  }
 }
 
 function _disconnect() {
@@ -1275,7 +1269,7 @@ function _disconnect() {
 
     try {
       const token = await _exchangeCode(code);
-      await _connect(token, { focusSearch: true });
+      await _connect(token);
     } catch (err) {
       console.error('[Aurora × Spotify] Code exchange failed:', err);
     }
@@ -1632,44 +1626,53 @@ function _syncCapsuleToggleState() {
   _capsuleCollapseBtn?.setAttribute('aria-expanded', String(expanded));
 }
 
-function _expandCapsule({ instant = false, focusSearch = false } = {}) {
+function _expandCapsule({ instant = false } = {}) {
   if (!_musicCapsule) return;
   const expanded = document.getElementById('capsuleExpanded');
   if (expanded) expanded.hidden = false;
   if (instant) _musicCapsule.classList.add('is-instant');
-  _musicCapsule.classList.add('is-expanded');
-  _syncCapsuleToggleState();
-  if (instant) {
-    requestAnimationFrame(() => _musicCapsule.classList.remove('is-instant'));
-  }
-  if (focusSearch) {
-    setTimeout(() => {
-      document.getElementById('searchInput')?.focus({ preventScroll: true });
-    }, 120);
-  }
+  _musicCapsule.classList.remove('is-collapsing');
+  requestAnimationFrame(() => {
+    _musicCapsule.classList.add('is-expanded');
+    _syncCapsuleToggleState();
+    if (instant) {
+      requestAnimationFrame(() => _musicCapsule.classList.remove('is-instant'));
+    }
+  });
 }
 
 function _collapseCapsule({ instant = false } = {}) {
   if (!_musicCapsule) return;
   _hideSearchResults();
-  if (instant) _musicCapsule.classList.add('is-instant');
+  document.getElementById('searchInput')?.blur();
+
+  const expanded = document.getElementById('capsuleExpanded');
+  if (instant) {
+    _musicCapsule.classList.add('is-instant');
+    _musicCapsule.classList.remove('is-expanded', 'is-collapsing');
+    if (expanded) expanded.hidden = true;
+    _syncCapsuleToggleState();
+    requestAnimationFrame(() => _musicCapsule.classList.remove('is-instant'));
+    return;
+  }
+
+  _musicCapsule.classList.add('is-collapsing');
   _musicCapsule.classList.remove('is-expanded');
   _syncCapsuleToggleState();
-  const expanded = document.getElementById('capsuleExpanded');
-  if (expanded) {
-    if (instant) {
-      expanded.hidden = true;
-      _musicCapsule.classList.remove('is-instant');
-    } else {
-      const onEnd = (event) => {
-        if (event.target !== _musicCapsule || event.propertyName !== 'height') return;
-        _musicCapsule.removeEventListener('transitionend', onEnd);
-        expanded.hidden = true;
-      };
-      _musicCapsule.addEventListener('transitionend', onEnd);
-      setTimeout(() => { expanded.hidden = true; }, 650);
-    }
-  }
+
+  const finish = () => {
+    _musicCapsule.classList.remove('is-collapsing');
+    if (expanded) expanded.hidden = true;
+  };
+
+  const onEnd = (event) => {
+    if (event.target !== _musicCapsule || event.propertyName !== 'height') return;
+    _musicCapsule.removeEventListener('transitionend', onEnd);
+    finish();
+  };
+
+  _musicCapsule.addEventListener('transitionend', onEnd);
+  setTimeout(finish, 620);
 }
 
 _capsuleExpandBtn?.addEventListener('click', (e) => {
