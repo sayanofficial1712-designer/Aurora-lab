@@ -1192,6 +1192,8 @@ function _announceMood(mood, track, confidence = 0) {
   _showControlFeedback(`Mood → ${label}`);
 }
 
+let _shouldOpenCapsuleAfterConnect = false;
+
 function _setConnectedUI(connected) {
   document.body.classList.toggle('spotify-connected', connected);
 }
@@ -1207,10 +1209,18 @@ async function _connect(token) {
   _premiumRestrictionDetected = false;
   _volumeSyncedFromSpotify = false;
   _setConnectedUI(true);
-  _showControlFeedback('Controlling your Spotify session');
+  _showControlFeedback('Connected — search for a track below');
   console.log('%c[Aurora × Spotify] Connected — genre-based audio mapping (no /audio-features)', 'color:#1DB954;font-weight:bold');
   await _refreshTrackAndMood(true);
   _pollInterval = setInterval(_poll, 2500);
+
+  if (_shouldOpenCapsuleAfterConnect) {
+    _shouldOpenCapsuleAfterConnect = false;
+    _expandCapsule();
+    setTimeout(() => {
+      document.getElementById('searchInput')?.focus({ preventScroll: true });
+    }, 460);
+  }
 }
 
 function _disconnect() {
@@ -1257,6 +1267,7 @@ function _disconnect() {
 
     try {
       const token = await _exchangeCode(code);
+      _shouldOpenCapsuleAfterConnect = true;
       await _connect(token);
     } catch (err) {
       console.error('[Aurora × Spotify] Code exchange failed:', err);
