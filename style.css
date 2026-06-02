@@ -1210,28 +1210,47 @@ body.spotify-connected .capsule-disconnect { display: inline-flex; align-items: 
   :root { --capsule-w: min(360px, calc(100vw - var(--gap) * 2)); }
 
   .mood-library {
-    max-width: calc(100vw - var(--gap));
+    width: calc(100vw - var(--gap) * 2);
+    max-width: none;
   }
 
   .mood-card-row {
     gap: 8px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    width: 100%;
+    padding: 0 2px 4px;
+  }
+
+  .mood-card-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mood-cartridge {
+    flex-shrink: 0;
+    scroll-snap-align: start;
   }
 }
 
 @media (max-width: 640px) {
   .mood-library {
     bottom: calc(var(--gap) + 52px);
-  }
-
-  .mood-library {
-    --card-w: calc((100vw - var(--gap) * 2 - 64px) / 9);
+    --card-w: 96px;
     --card-h: 42px;
   }
 
+  .mood-library-header {
+    padding: 0 4px;
+  }
+
   .mood-cartridge-label {
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 0;
-    padding: 0 6px;
+    padding: 0 8px;
   }
 }
 
