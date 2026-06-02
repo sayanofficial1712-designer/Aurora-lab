@@ -917,6 +917,12 @@ body.spotify-connected .music-capsule.is-playing .vinyl-tonearm {
   transition: background 0.3s ease;
 }
 
+.spotify-connect-btn .spotify-logo {
+  flex-shrink: 0;
+  display: block;
+  overflow: visible;
+}
+
 .spotify-connect-btn:hover { background: var(--accent-hover); }
 
 body.spotify-connected .spotify-connect-btn { display: none; }
