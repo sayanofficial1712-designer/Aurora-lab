@@ -1276,8 +1276,10 @@ function _disconnect() {
 })();
 
 const _connectBtn = document.getElementById('spotifyConnectBtn');
+const _connectBtnCollapsed = document.getElementById('spotifyConnectBtnCollapsed');
 const _disconnectBtn = document.getElementById('spotifyDisconnectBtn');
 if (_connectBtn) _connectBtn.addEventListener('click', _initiateAuth);
+if (_connectBtnCollapsed) _connectBtnCollapsed.addEventListener('click', _initiateAuth);
 if (_disconnectBtn) _disconnectBtn.addEventListener('click', _disconnect);
 
 // Playback controls
