@@ -194,6 +194,13 @@ let _premiumRestrictionDetected = false;
 let _shuffleState = false;
 let _repeatState = 'off';
 
+// Aurora-managed queue for autoplay between tracks
+let _auroraPlayQueue = [];
+let _auroraPlayQueueIndex = 0;
+let _auroraAdvanceLock = false;
+let _playbackSnapshot = null;
+let _autoplayTriggeredForTrackId = null;
+
 function _showControlFeedback(msg, isError = false) {
   const el = document.getElementById('playbackMsg');
   if (!el) return;
@@ -347,6 +354,8 @@ async function _fetchTrackRecommendations(token, track, limit = 24) {
     limit: String(Math.min(limit, 100)),
     seed_tracks: track.id,
   });
+  const artistId = track.artists?.[0]?.id;
+  if (artistId) params.set('seed_artists', artistId);
   try {
     const resp = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -361,32 +370,131 @@ async function _fetchTrackRecommendations(token, track, limit = 24) {
 
 async function _buildPlaybackQueue(token, primaryTrack, options = {}) {
   const seen = new Set();
-  const uris = [];
+  const tracks = [];
 
   const addTrack = (track) => {
-    if (!track?.uri || seen.has(track.uri)) return;
-    seen.add(track.uri);
-    uris.push(track.uri);
+    if (!track?.uri || !track?.id || seen.has(track.id)) return;
+    seen.add(track.id);
+    tracks.push(track);
   };
 
   addTrack(primaryTrack);
 
   if (options.queueTracks?.length) {
     for (const track of options.queueTracks) addTrack(track);
-    return uris.slice(0, 50);
-  }
-
-  if (primaryTrack?.id) {
+  } else if (primaryTrack?.id) {
     const recs = await _fetchTrackRecommendations(token, primaryTrack, 24);
     for (const track of recs) addTrack(track);
+
+    if (tracks.length < 6 && primaryTrack.artists?.[0]?.name) {
+      const artistTracks = await _searchArtistTracks(token, primaryTrack.artists[0].name, 12);
+      for (const track of artistTracks) addTrack(track);
+    }
+
+    if (tracks.length < 4) {
+      const artist = primaryTrack.artists?.[0]?.name || '';
+      const similar = await _searchTracksForMood(
+        token,
+        artist ? `artist:"${artist}"` : primaryTrack.name,
+        10
+      );
+      for (const track of similar) addTrack(track);
+    }
   }
 
-  if (uris.length < 6 && primaryTrack?.artists?.[0]?.name) {
-    const artistTracks = await _searchArtistTracks(token, primaryTrack.artists[0].name, 12);
-    for (const track of artistTracks) addTrack(track);
+  const limited = tracks.slice(0, 50);
+  return { tracks: limited, uris: limited.map((t) => t.uri) };
+}
+
+async function _enqueueTrackUris(token, uris) {
+  for (const uri of uris.slice(0, 49)) {
+    try {
+      const resp = await fetch(
+        `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(uri)}`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (resp.status === 403) break;
+    } catch {
+      /* try next */
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
+async function _startPlaybackOnDevice(token, uris, deviceId) {
+  let endpoint = 'https://api.spotify.com/v1/me/player/play';
+  if (deviceId) {
+    endpoint = `${endpoint}?device_id=${encodeURIComponent(deviceId)}`;
+  }
+  return _controlFetch('PUT', endpoint, { uris }, { quiet: true });
+}
+
+async function _advanceToQueueTrack(token, index) {
+  const track = _auroraPlayQueue[index];
+  if (!track || _auroraAdvanceLock) return false;
+
+  _auroraAdvanceLock = true;
+  try {
+    const deviceId = await _resolvePlaybackDeviceId(token);
+    const resp = await _startPlaybackOnDevice(token, [track.uri], deviceId);
+    if (!resp) return false;
+
+    _auroraPlayQueueIndex = index;
+    _autoplayTriggeredForTrackId = null;
+    _playbackSnapshot = {
+      trackId: track.id,
+      isPlaying: true,
+      progressMs: 0,
+      durationMs: track.duration_ms || 0,
+    };
+    _setTrackDisplay(track, true);
+    _syncProgressFromSpotify(0, track.duration_ms || 0);
+    _lastMoodTrackKey = null;
+    _scheduleTrackMoodRefresh();
+
+    const remaining = _auroraPlayQueue.slice(index + 1).map((t) => t.uri);
+    if (remaining.length) {
+      setTimeout(() => _enqueueTrackUris(token, remaining), 600);
+    }
+    return true;
+  } finally {
+    _auroraAdvanceLock = false;
+  }
+}
+
+async function _autoplayWatchdog(token, player) {
+  if (!_auroraPlayQueue.length || _auroraAdvanceLock) return;
+
+  if (player?.item?.id) {
+    const idx = _auroraPlayQueue.findIndex((t) => t.id === player.item.id);
+    if (idx >= 0) _auroraPlayQueueIndex = idx;
+
+    _playbackSnapshot = {
+      trackId: player.item.id,
+      isPlaying: !!player.is_playing,
+      progressMs: player.progress_ms || 0,
+      durationMs: player.item.duration_ms || 0,
+    };
+
+    const nearEnd = _playbackSnapshot.durationMs > 0
+      && _playbackSnapshot.progressMs >= _playbackSnapshot.durationMs - 2500;
+
+    if (!player.is_playing && nearEnd && idx >= 0 && idx < _auroraPlayQueue.length - 1) {
+      await _advanceToQueueTrack(token, idx + 1);
+    }
+    return;
   }
 
-  return uris.slice(0, 50);
+  const snap = _playbackSnapshot;
+  if (!snap?.trackId) return;
+
+  const finishedIdx = _auroraPlayQueue.findIndex((t) => t.id === snap.trackId);
+  if (finishedIdx < 0 || finishedIdx >= _auroraPlayQueue.length - 1) return;
+
+  const nearEnd = snap.durationMs > 0 && snap.progressMs >= snap.durationMs - 4000;
+  if (snap.isPlaying && !nearEnd) return;
+
+  await _advanceToQueueTrack(token, finishedIdx + 1);
 }
 
 async function _playTrackUri(uri, trackName, options = {}) {
@@ -401,22 +509,24 @@ async function _playTrackUri(uri, trackName, options = {}) {
   }
 
   const token = await _getToken();
-  let endpoint = 'https://api.spotify.com/v1/me/player/play';
   const deviceId = await _resolvePlaybackDeviceId(token);
-  if (deviceId) {
-    endpoint = `${endpoint}?device_id=${encodeURIComponent(deviceId)}`;
-  }
 
   const track = options.track;
   let body = { uris: [uri] };
+  let queue = { tracks: track ? [track] : [], uris: [uri] };
+
   if (track) {
-    const queueUris = await _buildPlaybackQueue(token, track, {
+    queue = await _buildPlaybackQueue(token, track, {
       queueTracks: options.queueTracks,
     });
-    if (queueUris.length) body = { uris: queueUris };
+    if (queue.uris.length) body = { uris: queue.uris };
   }
 
-  const resp = await _controlFetch('PUT', endpoint, body, { quiet: true });
+  _auroraPlayQueue = queue.tracks;
+  _auroraPlayQueueIndex = 0;
+  _autoplayTriggeredForTrackId = null;
+
+  const resp = await _startPlaybackOnDevice(token, body.uris, deviceId);
   if (resp) {
     if (options.fromMoodSelection && options.trackId) {
       _moodSelectionTrackId = options.trackId;
@@ -429,8 +539,18 @@ async function _playTrackUri(uri, trackName, options = {}) {
     }
 
     if (track) {
+      _playbackSnapshot = {
+        trackId: track.id,
+        isPlaying: true,
+        progressMs: 0,
+        durationMs: track.duration_ms || 0,
+      };
       _setTrackDisplay(track, true);
       _syncProgressFromSpotify(0, track.duration_ms || 0);
+    }
+
+    if (queue.uris.length > 1) {
+      setTimeout(() => _enqueueTrackUris(token, queue.uris.slice(1)), 700);
     }
 
     if (!options.fromMoodSelection) {
@@ -532,6 +652,17 @@ function _tickProgress() {
   _progressMs = Math.min(_durationMs, _progressMs + (now - _progressLastTick));
   _progressLastTick = now;
   _updateProgressUI();
+
+  if (!_auroraPlayQueue.length || _auroraAdvanceLock || _isSeeking) return;
+  const currentTrack = _auroraPlayQueue[_auroraPlayQueueIndex];
+  if (!currentTrack || _auroraPlayQueueIndex >= _auroraPlayQueue.length - 1) return;
+  if (_progressMs < _durationMs - 1200) return;
+  if (_autoplayTriggeredForTrackId === currentTrack.id) return;
+
+  _autoplayTriggeredForTrackId = currentTrack.id;
+  _getToken()
+    .then((token) => _advanceToQueueTrack(token, _auroraPlayQueueIndex + 1))
+    .catch(() => { _autoplayTriggeredForTrackId = null; });
 }
 setInterval(_tickProgress, 500);
 
@@ -945,7 +1076,9 @@ async function _applyMoodForTrack(token, track, trackKey) {
 
 async function _syncPlaybackFromData(data, { forceMood = false } = {}) {
   if (!data?.item) {
-    _setTrackDisplay(null);
+    if (!_auroraPlayQueue.length || _auroraAdvanceLock) {
+      _setTrackDisplay(null);
+    }
     return;
   }
 
@@ -1025,8 +1158,19 @@ async function _loadTrackAndApplyMood(token, track) {
 async function _poll() {
   try {
     const token = await _getToken();
-    const data = await _fetchCurrentTrack(token);
+    const player = await _fetchPlayer(token);
+    const data = player?.item
+      ? {
+          item: player.item,
+          is_playing: player.is_playing,
+          progress_ms: player.progress_ms,
+          device: player.device,
+          shuffle_state: player.shuffle_state,
+          repeat_state: player.repeat_state,
+        }
+      : null;
     await _syncPlaybackFromData(data);
+    await _autoplayWatchdog(token, player);
   } catch (err) {
     console.warn('[Aurora × Spotify]', err.message);
     if (err.message.includes('Refresh failed')) _disconnect();
@@ -1300,6 +1444,10 @@ function _disconnect() {
   _moodSelectionTrackId = null;
   _moodSelectionMoodId = null;
   clearTimeout(_moodPlayTimer);
+  _auroraPlayQueue = [];
+  _auroraPlayQueueIndex = 0;
+  _playbackSnapshot = null;
+  _autoplayTriggeredForTrackId = null;
   _isPremium = true;
   _premiumRestrictionDetected = false;
   localStorage.removeItem('aurora_spotify_token');
