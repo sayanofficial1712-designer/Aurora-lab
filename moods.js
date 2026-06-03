@@ -31,6 +31,7 @@
     'bold',
     'memory_lane',
     'midnight',
+    'neon',
     'indie',
     'bollywood',
   ];
@@ -198,6 +199,28 @@
         target_tempo: 82,
       },
     },
+    neon: {
+      label: 'Neon',
+      descriptor: 'Electric glow cutting through the dark.',
+      atmosphere: 'neon pulse • deep black-blue • vivid cyan & magenta',
+      palette: ['#050812', '#00F5FF', '#FF00AA'],
+      colors: expandPalette('#050812', '#00F5FF', '#FF00AA'),
+      glow: paletteGlow(['#00F5FF', '#FF00AA']),
+      speed: 46,
+      intensity: 60,
+      distortion: 52,
+      mouse: 0,
+      targets: { energy: 0.82, valence: 0.62, tempo: 128, acousticness: 0.08 },
+      constraints: { energyMin: 0.68, danceabilityMin: 0.58, tempoMin: 110 },
+      soundtrack: {
+        genres: ['synthwave', 'retrowave', 'electronic'],
+        artists: ['The Midnight', 'Kavinsky', 'Gunship'],
+        searches: ['The Midnight Sunset', 'Kavinsky Nightcall', 'synthwave neon hits'],
+        target_energy: 0.82,
+        target_valence: 0.62,
+        target_tempo: 128,
+      },
+    },
     indie: {
       label: 'Indie',
       descriptor: 'Raw, honest, and off the beaten path.',
@@ -250,6 +273,8 @@
     nostalgic: 'memory_lane',
     focus: 'mellow',
     locked_in: 'indie',
+    cyberpunk: 'neon',
+    retrowave: 'neon',
   };
 
   function toLibraryMood(moodId) {

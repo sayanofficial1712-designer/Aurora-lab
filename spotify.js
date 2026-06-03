@@ -674,6 +674,7 @@ const _TITLE_HINTS = [
   { match: /(chill|sleep|calm|peace|ambient|meditat|rain|soft|lullaby|gentle|mellow)/i, energy: 0.2, valence: 0.45, tempo: 72, danceability: 0.3, mood: 'mellow' },
   { match: /(party|dance|club|remix|banger|hype|fire|wild|crazy|loud)/i, energy: 0.95, valence: 0.85, tempo: 135, danceability: 0.95, mood: 'electric' },
   { match: /(love|happy|joy|sun|bright|smile|dream|paradise|forever)/i, energy: 0.7, valence: 0.85, tempo: 115, danceability: 0.72, mood: 'cozy' },
+  { match: /(neon|glow|cyber|synth|retrowave|outrun|vaporwave)/i, energy: 0.82, valence: 0.62, tempo: 128, danceability: 0.72, mood: 'neon' },
   { match: /(midnight|night|dark|moon|after dark)/i, energy: 0.28, valence: 0.35, tempo: 82, danceability: 0.35, mood: 'midnight' },
   { match: /(memory|memories|nostalg|retro|90s|childhood|old days)/i, energy: 0.42, valence: 0.55, tempo: 95, danceability: 0.45, mood: 'memory_lane' },
   { match: /(bollywood|filmi|hindi film|desi|punjabi|shaadi|sangeet)/i, energy: 0.72, valence: 0.78, tempo: 112, danceability: 0.82, mood: 'bollywood' },
@@ -691,6 +692,10 @@ const _ARTIST_HINTS = {
   'daft punk': 'electric', 'swedish house mafia': 'electric',
   'skrillex': 'electric', 'diplo': 'electric', 'chainsmokers': 'electric',
   'alan walker': 'electric', 'kygo': 'electric', 'illenium': 'electric',
+  // Neon / synthwave
+  'the midnight': 'neon', 'kavinsky': 'neon', 'gunship': 'neon',
+  'perturbator': 'neon', 'carpenter brut': 'neon', 'fm-84': 'neon',
+  'timecop1983': 'neon', 'the chromatics': 'neon',
   // Bold
   'the weeknd': 'bold', 'dua lipa': 'bold', 'weeknd': 'bold',
   'taylor swift': 'bold', 'ariana grande': 'bold', 'beyoncé': 'bold',
@@ -758,7 +763,10 @@ function _inferMoodHint(genres, text, artistNames) {
   if (/(ambient|chill|lofi|lo-fi|new.?age|downtempo|sleep|classical|orchestral|piano|baroque|opera)/i.test(genreText)) {
     return { mood: 'mellow', source: 'genre' };
   }
-  if (/(synthwave|trip.?hop|dark.?ambient)/i.test(genreText)) {
+  if (/(synthwave|retrowave|cyberpunk|outrun|vaporwave|neon.?pop)/i.test(genreText)) {
+    return { mood: 'neon', source: 'genre' };
+  }
+  if (/(trip.?hop|dark.?ambient)/i.test(genreText)) {
     return { mood: 'midnight', source: 'genre' };
   }
   if (/(r&b|soul|funk|disco|country|bossa|jazz)/i.test(genreText)) {
