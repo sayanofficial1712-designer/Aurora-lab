@@ -152,8 +152,6 @@ async function _fetchCurrentTrack(token) {
     is_playing: player.is_playing,
     progress_ms: player.progress_ms,
     device: player.device,
-    shuffle_state: player.shuffle_state,
-    repeat_state: player.repeat_state,
   };
 }
 
@@ -191,8 +189,6 @@ async function _fetchArtist(token, artistId) {
 let _isPlaying = false;
 let _isPremium = true; // updated from control responses
 let _premiumRestrictionDetected = false;
-let _shuffleState = false;
-let _repeatState = 'off';
 
 // Aurora-managed queue for autoplay between tracks
 let _auroraPlayQueue = [];
@@ -305,46 +301,6 @@ async function _skipPrev() {
     _moodSelectionMoodId = null;
     _lastMoodTrackKey = null;
     _scheduleTrackMoodRefresh();
-  }
-}
-
-function _updateModeButtonsUI() {
-  document.querySelectorAll('[data-mode="shuffle"]').forEach((btn) => {
-    btn.classList.toggle('is-active', _shuffleState);
-    btn.setAttribute('aria-pressed', String(_shuffleState));
-  });
-  document.querySelectorAll('[data-mode="repeat"]').forEach((btn) => {
-    const active = _repeatState !== 'off';
-    btn.classList.toggle('is-active', active);
-    btn.classList.toggle('is-repeat-one', _repeatState === 'track');
-    btn.setAttribute('aria-pressed', String(active));
-  });
-}
-
-async function _syncPlaybackModes(token) {
-  const player = await _fetchPlayer(token);
-  if (!player) return;
-  _shuffleState = !!player.shuffle_state;
-  _repeatState = player.repeat_state || 'off';
-  _updateModeButtonsUI();
-}
-
-async function _toggleShuffle() {
-  const next = !_shuffleState;
-  const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/shuffle?state=${next}`);
-  if (resp) {
-    _shuffleState = next;
-    _updateModeButtonsUI();
-  }
-}
-
-async function _toggleRepeat() {
-  const cycle = { off: 'context', context: 'track', track: 'off' };
-  const next = cycle[_repeatState] || 'context';
-  const resp = await _controlFetch('PUT', `https://api.spotify.com/v1/me/player/repeat?state=${next}`);
-  if (resp) {
-    _repeatState = next;
-    _updateModeButtonsUI();
   }
 }
 
@@ -1082,12 +1038,6 @@ async function _syncPlaybackFromData(data, { forceMood = false } = {}) {
     return;
   }
 
-  if (data.shuffle_state != null) {
-    _shuffleState = !!data.shuffle_state;
-    _repeatState = data.repeat_state || 'off';
-    _updateModeButtonsUI();
-  }
-
   _setTrackDisplay(data.item, data.is_playing !== false, data);
 
   const trackKey = _trackKey(data.item);
@@ -1165,8 +1115,6 @@ async function _poll() {
           is_playing: player.is_playing,
           progress_ms: player.progress_ms,
           device: player.device,
-          shuffle_state: player.shuffle_state,
-          repeat_state: player.repeat_state,
         }
       : null;
     await _syncPlaybackFromData(data);
@@ -1528,18 +1476,6 @@ document.getElementById('prevBtn')?.addEventListener('click', (e) => {
 document.getElementById('prevBtnMini')?.addEventListener('click', (e) => {
   e.stopPropagation();
   _skipPrev();
-});
-document.querySelectorAll('[data-mode="shuffle"]').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    _toggleShuffle();
-  });
-});
-document.querySelectorAll('[data-mode="repeat"]').forEach((btn) => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    _toggleRepeat();
-  });
 });
 
 // Search

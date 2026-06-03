@@ -749,19 +749,6 @@ body.spotify-connected .music-capsule.is-playing .vinyl-tonearm {
   color: var(--text-active);
 }
 
-.player-btn[data-mode="repeat"].is-repeat-one::after {
-  content: '1';
-  position: absolute;
-  font-size: 8px;
-  font-weight: 700;
-  margin-top: 8px;
-  margin-left: 8px;
-}
-
-.player-btn[data-mode="repeat"] {
-  position: relative;
-}
-
 .player-btn.play-pause,
 .capsule-play {
   width: 42px;
