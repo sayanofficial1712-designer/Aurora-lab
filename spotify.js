@@ -341,6 +341,54 @@ async function _toggleRepeat() {
   }
 }
 
+async function _fetchTrackRecommendations(token, track, limit = 24) {
+  if (!track?.id) return [];
+  const params = new URLSearchParams({
+    limit: String(Math.min(limit, 100)),
+    seed_tracks: track.id,
+  });
+  try {
+    const resp = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.tracks || [];
+  } catch {
+    return [];
+  }
+}
+
+async function _buildPlaybackQueue(token, primaryTrack, options = {}) {
+  const seen = new Set();
+  const uris = [];
+
+  const addTrack = (track) => {
+    if (!track?.uri || seen.has(track.uri)) return;
+    seen.add(track.uri);
+    uris.push(track.uri);
+  };
+
+  addTrack(primaryTrack);
+
+  if (options.queueTracks?.length) {
+    for (const track of options.queueTracks) addTrack(track);
+    return uris.slice(0, 50);
+  }
+
+  if (primaryTrack?.id) {
+    const recs = await _fetchTrackRecommendations(token, primaryTrack, 24);
+    for (const track of recs) addTrack(track);
+  }
+
+  if (uris.length < 6 && primaryTrack?.artists?.[0]?.name) {
+    const artistTracks = await _searchArtistTracks(token, primaryTrack.artists[0].name, 12);
+    for (const track of artistTracks) addTrack(track);
+  }
+
+  return uris.slice(0, 50);
+}
+
 async function _playTrackUri(uri, trackName, options = {}) {
   if (!window.spotifyState?.connected) {
     _showControlFeedback('Connect Spotify to play tracks', true);
@@ -359,7 +407,16 @@ async function _playTrackUri(uri, trackName, options = {}) {
     endpoint = `${endpoint}?device_id=${encodeURIComponent(deviceId)}`;
   }
 
-  const resp = await _controlFetch('PUT', endpoint, { uris: [uri] }, { quiet: true });
+  const track = options.track;
+  let body = { uris: [uri] };
+  if (track) {
+    const queueUris = await _buildPlaybackQueue(token, track, {
+      queueTracks: options.queueTracks,
+    });
+    if (queueUris.length) body = { uris: queueUris };
+  }
+
+  const resp = await _controlFetch('PUT', endpoint, body, { quiet: true });
   if (resp) {
     if (options.fromMoodSelection && options.trackId) {
       _moodSelectionTrackId = options.trackId;
@@ -371,7 +428,6 @@ async function _playTrackUri(uri, trackName, options = {}) {
       _scheduleTrackMoodRefresh();
     }
 
-    const track = options.track;
     if (track) {
       _setTrackDisplay(track, true);
       _syncProgressFromSpotify(0, track.duration_ms || 0);
@@ -1485,6 +1541,7 @@ async function _playMoodSoundtrack(moodId) {
       moodId: libMood,
       trackId: track.id,
       track,
+      queueTracks: tracks.filter((t) => t.id !== track.id),
     });
     _showControlFeedback(`${moodLabel} · ${track.name}`);
     _setTrackDisplay(track, true);
@@ -1606,6 +1663,7 @@ function _renderSoundtrackStack(tracks, lockedMood) {
         moodId: lockedMood,
         trackId: track.id,
         track,
+        queueTracks: tracks.filter((t) => t.id !== track.id),
       });
       if (typeof window.setMoodConfidence === 'function') {
         const features = await _deriveFeatures(await _getToken(), track);
