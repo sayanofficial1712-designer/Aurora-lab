@@ -129,6 +129,7 @@
             <img class="spotify-logo" src="assets/spotify-icon.png" width="22" height="22" alt="" aria-hidden="true">
             Connect Spotify
           </button>
+          <button type="button" class="capsule-switch-account" id="spotifySwitchAccountBtn">Switch account</button>
           <button type="button" class="capsule-disconnect" id="spotifyDisconnectBtn">Disconnect</button>
           <p class="capsule-status" id="playbackMsg"></p>
         </div>
@@ -195,6 +196,23 @@
   <input type="range" id="mouseInfluence" min="10" max="50" value="0" hidden>
   <span id="mouseValue" hidden>0</span>
   <input type="range" id="volumeSlider" min="0" max="100" value="70" hidden>
+
+  <div class="spotify-account-dialog" id="spotifyAccountDialog" hidden>
+    <button type="button" class="spotify-account-dialog__backdrop" data-spotify-dialog-dismiss aria-label="Close"></button>
+    <div class="spotify-account-dialog__panel glass-white" role="dialog" aria-labelledby="spotifyAccountDialogTitle" aria-modal="true">
+      <h3 class="spotify-account-dialog__title" id="spotifyAccountDialogTitle">Connect Spotify</h3>
+      <p class="spotify-account-dialog__hint" id="spotifyAccountDialogHint">If you use more than one Spotify account in this browser, choose how to sign in.</p>
+      <button type="button" class="spotify-account-option" data-spotify-auth="session">
+        <span class="spotify-account-option__label" id="spotifyAccountSessionLabel">Use current browser session</span>
+        <span class="spotify-account-option__desc" id="spotifyAccountSessionDesc">Continue with the account already signed in to Spotify</span>
+      </button>
+      <button type="button" class="spotify-account-option" data-spotify-auth="switch">
+        <span class="spotify-account-option__label">Choose a different account</span>
+        <span class="spotify-account-option__desc">Sign out of Spotify, then pick another account</span>
+      </button>
+      <button type="button" class="spotify-account-dialog__cancel" data-spotify-dialog-dismiss>Cancel</button>
+    </div>
+  </div>
 
   <script src="moods.js?v=20260648"></script>
   <script src="aurora.js?v=20260630"></script>

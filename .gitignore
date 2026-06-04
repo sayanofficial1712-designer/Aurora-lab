@@ -1,0 +1,31 @@
+# Local design docs, recordings, and exports (not part of the app)
+Doc/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Dependencies / package managers
+node_modules/
+.npm/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Local dev / tunnel helpers (generated at runtime)
+.aurora-server.pid
+*.log
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cursor (local agent/index data)
+.cursor/
