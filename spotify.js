@@ -70,7 +70,11 @@ async function _generatePKCE() {
 // ─────────────────────────────────────────────────────────────
 // Auth flow
 // ─────────────────────────────────────────────────────────────
-async function _buildAuthorizeUrl() {
+async function _initiateAuth() {
+  if (SPOTIFY_CLIENT_ID === 'YOUR_CLIENT_ID_HERE') {
+    alert('Paste your Spotify Client ID into spotify.js first.\nCreate an app at https://developer.spotify.com/dashboard');
+    return;
+  }
   const { verifier, challenge } = await _generatePKCE();
   localStorage.setItem('aurora_spotify_verifier', verifier);
   sessionStorage.setItem('aurora_spotify_auth_pending', '1');
@@ -84,96 +88,7 @@ async function _buildAuthorizeUrl() {
     code_challenge: challenge,
   });
 
-  return `https://accounts.spotify.com/authorize?${params}`;
-}
-
-async function _startSpotifyAuth({ switchAccount = false } = {}) {
-  if (SPOTIFY_CLIENT_ID === 'YOUR_CLIENT_ID_HERE') {
-    alert('Paste your Spotify Client ID into spotify.js first.\nCreate an app at https://developer.spotify.com/dashboard');
-    return;
-  }
-  const authUrl = await _buildAuthorizeUrl();
-  if (switchAccount) {
-    window.location.href = `https://accounts.spotify.com/logout?continue=${encodeURIComponent(authUrl)}`;
-  } else {
-    window.location.href = authUrl;
-  }
-}
-
-/** @deprecated — use _startSpotifyAuth */
-async function _initiateAuth() {
-  return _startSpotifyAuth({ switchAccount: false });
-}
-
-let _spotifyAccountDialogMode = 'connect';
-
-function _closeSpotifyAccountPicker() {
-  const dialog = document.getElementById('spotifyAccountDialog');
-  if (!dialog) return;
-  dialog.hidden = true;
-  document.body.classList.remove('spotify-account-dialog-open');
-}
-
-function _openSpotifyAccountPicker(mode = 'connect') {
-  const dialog = document.getElementById('spotifyAccountDialog');
-  if (!dialog) {
-    _startSpotifyAuth({ switchAccount: false });
-    return;
-  }
-
-  _spotifyAccountDialogMode = mode;
-  const title = document.getElementById('spotifyAccountDialogTitle');
-  const hint = document.getElementById('spotifyAccountDialogHint');
-  const sessionLabel = document.getElementById('spotifyAccountSessionLabel');
-  const sessionDesc = document.getElementById('spotifyAccountSessionDesc');
-
-  if (mode === 'switch' && window.spotifyState.connected) {
-    if (title) title.textContent = 'Switch Spotify account';
-    if (hint) hint.textContent = 'Stay on your current account or sign in with a different one.';
-    if (sessionLabel) sessionLabel.textContent = 'Keep current account';
-    if (sessionDesc) sessionDesc.textContent = 'Stay connected as you are now';
-  } else {
-    if (title) title.textContent = 'Connect Spotify';
-    if (hint) hint.textContent = 'If you use more than one Spotify account in this browser, choose how to sign in.';
-    if (sessionLabel) sessionLabel.textContent = 'Use current browser session';
-    if (sessionDesc) sessionDesc.textContent = 'Continue with the account already signed in to Spotify';
-  }
-
-  dialog.hidden = false;
-  document.body.classList.add('spotify-account-dialog-open');
-  dialog.querySelector('.spotify-account-option')?.focus();
-}
-
-function _handleSpotifyAccountChoice(switchAccount) {
-  _closeSpotifyAccountPicker();
-  if (_spotifyAccountDialogMode === 'switch' && window.spotifyState.connected && !switchAccount) {
-    return;
-  }
-  if (_spotifyAccountDialogMode === 'switch' && window.spotifyState.connected && switchAccount) {
-    _disconnect();
-  }
-  _startSpotifyAuth({ switchAccount });
-}
-
-function _bindSpotifyAccountPicker() {
-  const dialog = document.getElementById('spotifyAccountDialog');
-  if (!dialog) return;
-
-  dialog.querySelectorAll('[data-spotify-dialog-dismiss]').forEach((el) => {
-    el.addEventListener('click', _closeSpotifyAccountPicker);
-  });
-
-  dialog.querySelector('[data-spotify-auth="session"]')?.addEventListener('click', () => {
-    _handleSpotifyAccountChoice(false);
-  });
-
-  dialog.querySelector('[data-spotify-auth="switch"]')?.addEventListener('click', () => {
-    _handleSpotifyAccountChoice(true);
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !dialog.hidden) _closeSpotifyAccountPicker();
-  });
+  window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
 async function _exchangeCode(code) {
@@ -1535,12 +1450,9 @@ function _disconnect() {
 const _connectBtn = document.getElementById('spotifyConnectBtn');
 const _connectBtnCollapsed = document.getElementById('spotifyConnectBtnCollapsed');
 const _disconnectBtn = document.getElementById('spotifyDisconnectBtn');
-const _switchAccountBtn = document.getElementById('spotifySwitchAccountBtn');
-if (_connectBtn) _connectBtn.addEventListener('click', () => _openSpotifyAccountPicker('connect'));
-if (_connectBtnCollapsed) _connectBtnCollapsed.addEventListener('click', () => _openSpotifyAccountPicker('connect'));
-if (_switchAccountBtn) _switchAccountBtn.addEventListener('click', () => _openSpotifyAccountPicker('switch'));
+if (_connectBtn) _connectBtn.addEventListener('click', _initiateAuth);
+if (_connectBtnCollapsed) _connectBtnCollapsed.addEventListener('click', _initiateAuth);
 if (_disconnectBtn) _disconnectBtn.addEventListener('click', _disconnect);
-_bindSpotifyAccountPicker();
 
 // Playback controls
 document.querySelectorAll('#playPauseBtn, #playPauseBtnExpanded').forEach((btn) => {
