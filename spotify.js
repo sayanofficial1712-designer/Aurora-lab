@@ -1598,10 +1598,9 @@ let _soundtrackLoading = false;
 
 async function _searchTracksForMood(token, query, limit = 10) {
   if (!token) return [];
-  const market = await _getUserMarket(token);
   const url =
     `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}` +
-    `&type=track&limit=${limit}&market=${market}`;
+    `&type=track&limit=${limit}`;
 
   const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!resp.ok) {
@@ -1749,7 +1748,6 @@ async function _fetchRecommendations(token, moodId) {
   if (!cfg || !token) return [];
 
   const genres = _normalizeSeedGenres(cfg.genres);
-  const market = await _getUserMarket(token);
 
   async function fetchWithGenres(seedGenres) {
     const params = new URLSearchParams({
@@ -1758,7 +1756,6 @@ async function _fetchRecommendations(token, moodId) {
       target_energy: String(cfg.target_energy),
       target_valence: String(cfg.target_valence),
       target_tempo: String(cfg.target_tempo),
-      market,
     });
     const resp = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
