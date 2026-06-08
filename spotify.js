@@ -1602,18 +1602,26 @@ async function _searchTracksForMood(token, query, limit = 10) {
     `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}` +
     `&type=track&limit=${limit}`;
 
-  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  let resp;
+  try {
+    resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch (networkErr) {
+    console.warn('[Aurora × Spotify] network error on search:', networkErr.message);
+    _showControlFeedback(`Search failed: network error`, true);
+    return [];
+  }
+
   if (!resp.ok) {
     const detail = await resp.text().catch(() => '');
     console.warn('[Aurora × Spotify] search failed', resp.status, query, detail);
-    if (resp.status === 401) _showControlFeedback('Session expired — reconnect Spotify', true);
-    if (resp.status === 403) {
-      _showControlFeedback('Spotify API blocked — add your email in Developer Dashboard → User Management', true);
-    }
+    _showControlFeedback(`Search error ${resp.status} — ${detail.slice(0, 60) || 'reconnect Spotify'}`, true);
     return [];
   }
+
   const data = await resp.json();
-  return data.tracks?.items || [];
+  const items = data.tracks?.items || [];
+  console.log('[Aurora × Spotify] search', JSON.stringify(query), '→', items.length, 'results');
+  return items;
 }
 
 async function _searchArtistTracks(token, artistName, limit = 6) {
