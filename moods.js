@@ -59,7 +59,7 @@
       targets: { energy: 0.38, valence: 0.72, tempo: 92, acousticness: 0.55 },
       constraints: { valenceMin: 0.55, energyMax: 0.55, acousticnessMin: 0.35 },
       soundtrack: {
-        genres: ['dream-pop', 'indie', 'ambient'],
+        genres: ['indie', 'ambient', 'chill'],
         artists: ['Lana Del Rey', 'Harry Styles', 'Clairo'],
         searches: ['Lana Del Rey Summertime Sadness', 'Harry Styles As It Was', 'dream pop hits'],
         target_energy: 0.38,
@@ -81,7 +81,7 @@
       targets: { energy: 0.88, valence: 0.72, tempo: 132, acousticness: 0.1 },
       constraints: { energyMin: 0.75, tempoMin: 118, danceabilityMin: 0.65 },
       soundtrack: {
-        genres: ['edm', 'hyperpop', 'dance'],
+        genres: ['edm', 'electronic', 'dance'],
         artists: ['Avicii', 'Calvin Harris', 'The Chainsmokers'],
         searches: ['Avicii Wake Me Up', 'Calvin Harris Feel So Close', 'edm hits'],
         target_energy: 0.88,
@@ -103,7 +103,7 @@
       targets: { energy: 0.32, valence: 0.72, tempo: 96, acousticness: 0.58 },
       constraints: { acousticnessMin: 0.4, tempoMax: 112, valenceMin: 0.55 },
       soundtrack: {
-        genres: ['acoustic', 'lo-fi', 'indie-pop'],
+        genres: ['acoustic', 'chill', 'indie-pop'],
         artists: ['Norah Jones', 'John Mayer', 'Ed Sheeran'],
         searches: ['Norah Jones Come Away With Me', 'John Mayer Gravity', 'acoustic hits'],
         target_energy: 0.32,
@@ -169,7 +169,7 @@
       targets: { energy: 0.42, valence: 0.55, tempo: 95, acousticness: 0.58 },
       constraints: { valenceMin: 0.4, valenceMax: 0.72, acousticnessMin: 0.35 },
       soundtrack: {
-        genres: ['soft-rock', 'indie', 'synth-pop'],
+        genres: ['rock', 'indie', 'synth-pop'],
         artists: ['Oasis', 'Coldplay', 'Bruno Mars'],
         searches: ['Oasis Wonderwall', 'Coldplay Yellow', '90s hits'],
         target_energy: 0.42,
@@ -191,7 +191,7 @@
       targets: { energy: 0.28, valence: 0.35, tempo: 82, acousticness: 0.45 },
       constraints: { energyMax: 0.45, valenceMax: 0.55, tempoMax: 105 },
       soundtrack: {
-        genres: ['dark-ambient', 'synthwave', 'trip-hop'],
+        genres: ['ambient', 'synth-pop', 'trip-hop'],
         artists: ['The Weeknd', 'Frank Ocean', 'Billie Eilish'],
         searches: ['The Weeknd Starboy', 'Frank Ocean Thinkin Bout You', 'late night pop'],
         target_energy: 0.28,
@@ -213,7 +213,7 @@
       targets: { energy: 0.82, valence: 0.62, tempo: 128, acousticness: 0.08 },
       constraints: { energyMin: 0.68, danceabilityMin: 0.58, tempoMin: 110 },
       soundtrack: {
-        genres: ['synthwave', 'retrowave', 'electronic'],
+        genres: ['synth-pop', 'electronic', 'dance'],
         artists: ['The Midnight', 'Kavinsky', 'Gunship'],
         searches: ['The Midnight Sunset', 'Kavinsky Nightcall', 'synthwave neon hits'],
         target_energy: 0.82,
@@ -235,7 +235,7 @@
       targets: { energy: 0.48, valence: 0.58, tempo: 102, acousticness: 0.52 },
       constraints: { acousticnessMin: 0.3, energyMin: 0.3, energyMax: 0.65 },
       soundtrack: {
-        genres: ['indie', 'alternative', 'indie-rock'],
+        genres: ['indie', 'alternative', 'rock'],
         artists: ['Arctic Monkeys', 'Tame Impala', 'Prateek Kuhad'],
         searches: ['Arctic Monkeys Do I Wanna Know', 'Tame Impala The Less I Know', 'indie rock hits'],
         target_energy: 0.48,
@@ -257,7 +257,7 @@
       targets: { energy: 0.72, valence: 0.78, tempo: 112, acousticness: 0.28 },
       constraints: { energyMin: 0.55, valenceMin: 0.55, danceabilityMin: 0.5 },
       soundtrack: {
-        genres: ['bollywood', 'desi', 'filmi'],
+        genres: ['indian', 'pop', 'world-music'],
         artists: ['Arijit Singh', 'Shreya Ghoshal', 'Pritam'],
         searches: ['Arijit Singh Kesariya', 'Shreya Ghoshal Agar Tum Saath Ho', 'bollywood hits'],
         target_energy: 0.72,

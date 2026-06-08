@@ -1,17 +1,37 @@
 // ─────────────────────────────────────────────────────────────
-// STEP 1: Paste your Spotify Client ID here after creating an
-// app at https://developer.spotify.com/dashboard
-// Add http://localhost:3000 (and your deployed URL) as a
-// Redirect URI in your Spotify app settings.
+// Spotify app: https://developer.spotify.com/dashboard
+// Settings → Redirect URIs — add every URL below EXACTLY (trailing / matters):
+//   https://aurora-lab-navy.vercel.app/
+//   https://sayanofficial1712-designer.github.io/Aurora-lab/
+//   http://localhost:3000/
+// Use the production Vercel link above, not one-off preview *.vercel.app URLs.
 // ─────────────────────────────────────────────────────────────
 const SPOTIFY_CLIENT_ID = 'a0b0a5190eff47bd92e15db39f5d37e6';
-/** Must match a Redirect URI in your Spotify app dashboard exactly */
+
+/** Must match a Redirect URI in Spotify dashboard exactly (trailing / matters). */
 function _spotifyRedirectUri() {
-  const path = window.location.pathname.replace(/index\.html$/i, '');
+  const { hostname, port, protocol, pathname, origin } = window.location;
+
+  if (hostname === 'aurora-lab-navy.vercel.app') {
+    return 'https://aurora-lab-navy.vercel.app/';
+  }
+  if (hostname === 'sayanofficial1712-designer.github.io') {
+    return 'https://sayanofficial1712-designer.github.io/Aurora-lab/';
+  }
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    const p = port || '3000';
+    return `${protocol}//${hostname}:${p}/`;
+  }
+
+  const path = pathname.replace(/index\.html$/i, '');
   const base = path.endsWith('/') ? path : `${path}/`;
-  return `${window.location.origin}${base}`;
+  return `${origin}${base}`;
 }
-const SPOTIFY_REDIRECT_URI = _spotifyRedirectUri();
+
+function _spotifyRedirectUriHelp() {
+  const uri = _spotifyRedirectUri();
+  return `Add this Redirect URI in Spotify Dashboard → your app → Settings → Redirect URIs, then click Save:\n\n${uri}`;
+}
 const SPOTIFY_SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state user-read-private user-read-recently-played';
 
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +95,9 @@ async function _initiateAuth() {
     alert('Paste your Spotify Client ID into spotify.js first.\nCreate an app at https://developer.spotify.com/dashboard');
     return;
   }
+  const redirectUri = _spotifyRedirectUri();
+  console.info('[Aurora × Spotify] redirect_uri:', redirectUri);
+
   const { verifier, challenge } = await _generatePKCE();
   localStorage.setItem('aurora_spotify_verifier', verifier);
   sessionStorage.setItem('aurora_spotify_auth_pending', '1');
@@ -82,7 +105,7 @@ async function _initiateAuth() {
   const params = new URLSearchParams({
     client_id: SPOTIFY_CLIENT_ID,
     response_type: 'code',
-    redirect_uri: SPOTIFY_REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: SPOTIFY_SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
@@ -100,7 +123,7 @@ async function _exchangeCode(code) {
       client_id: SPOTIFY_CLIENT_ID,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: SPOTIFY_REDIRECT_URI,
+      redirect_uri: _spotifyRedirectUri(),
       code_verifier: verifier,
     }),
   });
@@ -139,6 +162,55 @@ async function _getToken() {
   const expiry = parseInt(localStorage.getItem('aurora_spotify_expiry') || '0');
   if (Date.now() > expiry - 60000) return _refreshToken();
   return localStorage.getItem('aurora_spotify_token');
+}
+
+let _userMarket = null;
+
+async function _getUserMarket(token) {
+  if (_userMarket) return _userMarket;
+  try {
+    const resp = await fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      _userMarket = data.country || 'US';
+    }
+  } catch {
+    /* use default */
+  }
+  return _userMarket || 'US';
+}
+
+/** Map mood genre labels to Spotify-valid recommendation seed genres */
+const _VALID_GENRE_SEEDS = new Set([
+  'acoustic', 'ambient', 'alternative', 'chill', 'classical', 'dance', 'edm',
+  'electronic', 'folk', 'hip-hop', 'indie', 'indie-pop', 'jazz', 'metal', 'pop',
+  'punk', 'punk-rock', 'r-n-b', 'rock', 'soul', 'study', 'synth-pop', 'techno',
+  'trance', 'trip-hop', 'indian', 'world-music', 'piano', 'romance', 'sad',
+]);
+
+const _GENRE_ALIASES = {
+  'dream-pop': 'indie',
+  hyperpop: 'electronic',
+  'lo-fi': 'chill',
+  'dark-ambient': 'ambient',
+  retrowave: 'synth-pop',
+  'soft-rock': 'rock',
+  bollywood: 'indian',
+  desi: 'indian',
+  filmi: 'indian',
+  'indie-rock': 'indie',
+};
+
+function _normalizeSeedGenres(genres = []) {
+  const out = [];
+  for (const g of genres) {
+    const mapped = _GENRE_ALIASES[g] || g;
+    if (_VALID_GENRE_SEEDS.has(mapped) && !out.includes(mapped)) out.push(mapped);
+    if (out.length >= 3) break;
+  }
+  return out.length ? out : ['pop'];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -727,13 +799,8 @@ async function _searchTracks(query) {
   }
   try {
     const token = await _getToken();
-    const resp = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!resp.ok) return;
-    const data = await resp.json();
-    _showSearchResults(data.tracks?.items || []);
+    const items = await _searchTracksForMood(token, query, 5);
+    _showSearchResults(items);
   } catch (err) {
     console.warn('[Aurora × Spotify] search error:', err.message);
   }
@@ -1401,6 +1468,7 @@ function _disconnect() {
   localStorage.removeItem('aurora_spotify_token');
   localStorage.removeItem('aurora_spotify_refresh');
   localStorage.removeItem('aurora_spotify_expiry');
+  _userMarket = null;
   _setConnectedUI(false);
   _setTrackDisplay(null);
   const feedback = document.getElementById('playbackMsg');
@@ -1417,6 +1485,7 @@ function _disconnect() {
 
   if (authError) {
     console.warn('[Aurora × Spotify] Auth error:', authError);
+    alert(`Spotify login failed (${authError}).\n\n${_spotifyRedirectUriHelp()}`);
     return;
   }
 
@@ -1528,17 +1597,30 @@ const _generateSoundtrackBtn = document.getElementById('generateSoundtrackBtn');
 let _soundtrackLoading = false;
 
 async function _searchTracksForMood(token, query, limit = 10) {
-  const resp = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!resp.ok) return [];
+  if (!token) return [];
+  const market = await _getUserMarket(token);
+  const url =
+    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}` +
+    `&type=track&limit=${limit}&market=${market}`;
+
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => '');
+    console.warn('[Aurora × Spotify] search failed', resp.status, query, detail);
+    if (resp.status === 401) _showControlFeedback('Session expired — reconnect Spotify', true);
+    if (resp.status === 403) {
+      _showControlFeedback('Spotify API blocked — add your email in Developer Dashboard → User Management', true);
+    }
+    return [];
+  }
   const data = await resp.json();
   return data.tracks?.items || [];
 }
 
 async function _searchArtistTracks(token, artistName, limit = 6) {
-  return _searchTracksForMood(token, `artist:"${artistName}"`, limit);
+  let tracks = await _searchTracksForMood(token, `artist:"${artistName}"`, limit);
+  if (!tracks.length) tracks = await _searchTracksForMood(token, artistName, limit);
+  return tracks;
 }
 
 function _mergeUniqueTracks(tracks) {
@@ -1591,8 +1673,12 @@ async function _collectTracksForMood(token, moodId, limit = 24) {
 
   if (merged.length < 5) {
     const label = window.AuroraMoods?.MOODS?.[moodId]?.label || moodId;
-    const fallback = await _searchTracksForMood(token, `${label} hits`, 10);
-    merged = _mergeUniqueTracks([...merged, ...fallback]);
+    const fallbacks = await Promise.all([
+      _searchTracksForMood(token, `${label} hits`, 10),
+      _searchTracksForMood(token, `${label} playlist`, 10),
+      _searchTracksForMood(token, (cfg.genres || [])[0] || 'pop', 10),
+    ]);
+    merged = _mergeUniqueTracks([...merged, ...fallbacks.flat()]);
   }
 
   return _sortTracksByPopularity(merged).slice(0, limit);
@@ -1600,7 +1686,10 @@ async function _collectTracksForMood(token, moodId, limit = 24) {
 
 async function _playMoodSoundtrack(moodId) {
   const libMood = window.AuroraMoods?.toLibraryMood?.(moodId) ?? moodId;
-  if (!window.spotifyState?.connected) return;
+  if (!window.spotifyState?.connected) {
+    _showControlFeedback('Connect Spotify first, then pick a mood', true);
+    return;
+  }
   if (_soundtrackLoading) return;
 
   _soundtrackLoading = true;
@@ -1657,23 +1746,37 @@ window.clearSoundtrackStack = _clearSoundtrackStack;
 
 async function _fetchRecommendations(token, moodId) {
   const cfg = _MOOD_SOUNDTRACK[moodId];
-  if (!cfg) return [];
+  if (!cfg || !token) return [];
 
-  const params = new URLSearchParams({
-    limit: '5',
-    seed_genres: cfg.genres.slice(0, 3).join(','),
-    target_energy: String(cfg.target_energy),
-    target_valence: String(cfg.target_valence),
-    target_tempo: String(cfg.target_tempo),
-  });
+  const genres = _normalizeSeedGenres(cfg.genres);
+  const market = await _getUserMarket(token);
 
-  try {
+  async function fetchWithGenres(seedGenres) {
+    const params = new URLSearchParams({
+      limit: '8',
+      seed_genres: seedGenres.join(','),
+      target_energy: String(cfg.target_energy),
+      target_valence: String(cfg.target_valence),
+      target_tempo: String(cfg.target_tempo),
+      market,
+    });
     const resp = await fetch(`https://api.spotify.com/v1/recommendations?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resp.ok) return [];
+    if (!resp.ok) {
+      console.warn('[Aurora × Spotify] recommendations failed', resp.status, seedGenres.join(','));
+      return [];
+    }
     const data = await resp.json();
     return data.tracks || [];
+  }
+
+  try {
+    let tracks = await fetchWithGenres(genres.slice(0, 3));
+    if (!tracks.length && genres.length) {
+      tracks = await fetchWithGenres([genres[0]]);
+    }
+    return tracks;
   } catch {
     return [];
   }
