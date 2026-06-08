@@ -1554,7 +1554,7 @@ if (_searchInput) {
     clearTimeout(_searchTimer);
     const q = e.target.value.trim();
     if (!q) { _hideSearchResults(); return; }
-    _searchTimer = setTimeout(() => _searchTracks(q), 350);
+    _searchTimer = setTimeout(() => _searchTracks(q), 600);
   });
 
   _searchInput.addEventListener('keydown', (e) => {
@@ -1596,6 +1596,26 @@ const _soundtrackStack = document.getElementById('soundtrackStack');
 const _generateSoundtrackBtn = document.getElementById('generateSoundtrackBtn');
 let _soundtrackLoading = false;
 
+let _rateLimitUntil = 0;
+
+async function _spotifyFetch(url, token) {
+  if (Date.now() < _rateLimitUntil) {
+    const wait = _rateLimitUntil - Date.now();
+    console.warn('[Aurora × Spotify] rate-limited, waiting', wait, 'ms');
+    await new Promise((r) => setTimeout(r, wait));
+  }
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (resp.status === 429) {
+    const retryAfter = parseInt(resp.headers.get('Retry-After') || '10', 10);
+    _rateLimitUntil = Date.now() + retryAfter * 1000;
+    const secs = Math.ceil(retryAfter);
+    _showControlFeedback(`Spotify rate limit — retrying in ${secs}s`, true);
+    console.warn('[Aurora × Spotify] 429 — retry after', secs, 's');
+    return null;
+  }
+  return resp;
+}
+
 async function _searchTracksForMood(token, query, limit = 10) {
   if (!token) return [];
   const url =
@@ -1604,24 +1624,24 @@ async function _searchTracksForMood(token, query, limit = 10) {
 
   let resp;
   try {
-    resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    resp = await _spotifyFetch(url, token);
   } catch (networkErr) {
     console.warn('[Aurora × Spotify] network error on search:', networkErr.message);
-    _showControlFeedback(`Search failed: network error`, true);
     return [];
   }
+
+  if (!resp) return [];
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => '');
     console.warn('[Aurora × Spotify] search failed', resp.status, query, detail);
-    _showControlFeedback(`Search error ${resp.status} — ${detail.slice(0, 60) || 'reconnect Spotify'}`, true);
+    if (resp.status === 401) _showControlFeedback('Session expired — reconnect Spotify', true);
+    if (resp.status === 403) _showControlFeedback('Spotify API blocked — check User Management in Developer Dashboard', true);
     return [];
   }
 
   const data = await resp.json();
-  const items = data.tracks?.items || [];
-  console.log('[Aurora × Spotify] search', JSON.stringify(query), '→', items.length, 'results');
-  return items;
+  return data.tracks?.items || [];
 }
 
 async function _searchArtistTracks(token, artistName, limit = 6) {
@@ -1667,25 +1687,32 @@ async function _collectTracksForMood(token, moodId, limit = 24) {
   const cfg = _MOOD_SOUNDTRACK[moodId];
   if (!cfg) return [];
 
-  const artistQueries = (cfg.artists || []).map((name) => _searchArtistTracks(token, name, 8));
-  const searchQueries = (cfg.searches || []).map((q) => _searchTracksForMood(token, q, 8));
+  // Sequential batches to avoid rate-limiting
+  const recs = await _fetchRecommendations(token, moodId);
+  let merged = _mergeUniqueTracks(recs);
 
-  const batches = await Promise.all([
-    _fetchRecommendations(token, moodId),
-    ...artistQueries,
-    ...searchQueries,
-  ]);
+  if (merged.length < 8) {
+    // Try first artist search
+    const artist = (cfg.artists || [])[0];
+    if (artist) {
+      const artistTracks = await _searchArtistTracks(token, artist, 8);
+      merged = _mergeUniqueTracks([...merged, ...artistTracks]);
+    }
+  }
 
-  let merged = _mergeUniqueTracks(batches.flat());
+  if (merged.length < 8) {
+    // Try first keyword search
+    const keyword = (cfg.searches || [])[0];
+    if (keyword) {
+      const kwTracks = await _searchTracksForMood(token, keyword, 10);
+      merged = _mergeUniqueTracks([...merged, ...kwTracks]);
+    }
+  }
 
   if (merged.length < 5) {
     const label = window.AuroraMoods?.MOODS?.[moodId]?.label || moodId;
-    const fallbacks = await Promise.all([
-      _searchTracksForMood(token, `${label} hits`, 10),
-      _searchTracksForMood(token, `${label} playlist`, 10),
-      _searchTracksForMood(token, (cfg.genres || [])[0] || 'pop', 10),
-    ]);
-    merged = _mergeUniqueTracks([...merged, ...fallbacks.flat()]);
+    const fallback = await _searchTracksForMood(token, `${label} hits`, 10);
+    merged = _mergeUniqueTracks([...merged, ...fallback]);
   }
 
   return _sortTracksByPopularity(merged).slice(0, limit);
